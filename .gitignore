@@ -1,0 +1,6 @@
+# Track only source code under source/.
+*
+
+!.gitignore
+!source/
+!source/**
