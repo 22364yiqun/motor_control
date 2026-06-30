@@ -41,6 +41,11 @@ static volatile int32_t m_i32SpeedTargetFinalDegS = 0;
 static volatile float m_f32SpeedTargetFinalRadS = 0.0f;
 static volatile float m_f32SpeedTargetRadS = 0.0f;
 static volatile float m_f32SpeedErrorRadS = 0.0f;
+static volatile uint8_t m_u8ControlMode = APP_CONTROL_MODE_SPEED;
+static volatile int32_t m_i32PositionTargetDeg = 0;
+static volatile float m_f32PositionTargetRad = 0.0f;
+static volatile float m_f32PositionErrorRad = 0.0f;
+static volatile uint8_t m_u8PositionDone = 0U;
 static float m_f32SpeedIntegralIqA = 0.0f;
 static uint16_t m_u16SpeedLoopDiv = 0U;
 static uint32_t m_u32StartupHoldUntilTick = 0UL;
@@ -51,6 +56,17 @@ static float Motor_ControlWrapTwoPi(float angle)
         angle -= APP_TWO_PI;
     }
     while (angle < 0.0f) {
+        angle += APP_TWO_PI;
+    }
+    return angle;
+}
+
+static float Motor_ControlWrapPi(float angle)
+{
+    while (angle >= (APP_TWO_PI * 0.5f)) {
+        angle -= APP_TWO_PI;
+    }
+    while (angle < -(APP_TWO_PI * 0.5f)) {
         angle += APP_TWO_PI;
     }
     return angle;
@@ -170,6 +186,38 @@ static void Motor_ControlResetSpeedLoop(void)
     m_f32SpeedErrorRadS = 0.0f;
     m_u16SpeedLoopDiv = 0U;
     m_u32StartupHoldUntilTick = 0UL;
+}
+
+static float Motor_ControlPositionLoopStep(void)
+{
+    float speed_target_rad_s;
+    float abs_err;
+
+    m_f32PositionErrorRad = Motor_ControlWrapPi(m_f32PositionTargetRad - Encoder_GetMechAngleRad());
+    abs_err = m_f32PositionErrorRad;
+    if (abs_err < 0.0f) {
+        abs_err = -abs_err;
+    }
+
+    if (m_u8PositionDone != 0U) {
+        if (abs_err > APP_POSITION_RESTART_BAND_RAD) {
+            m_u8PositionDone = 0U;
+        }
+    } else if (abs_err < APP_POSITION_DONE_BAND_RAD) {
+        m_u8PositionDone = 1U;
+    }
+
+    if (m_u8PositionDone != 0U) {
+        speed_target_rad_s = 0.0f;
+    } else {
+        speed_target_rad_s = (APP_POSITION_KP_SPEED * m_f32PositionErrorRad) -
+                             (APP_POSITION_KD_SPEED * Encoder_GetMechSpeedRadS());
+        speed_target_rad_s = Motor_ControlClamp(speed_target_rad_s,
+                                                -APP_POSITION_SPEED_LIMIT_RAD_S,
+                                                 APP_POSITION_SPEED_LIMIT_RAD_S);
+    }
+
+    return speed_target_rad_s;
 }
 
 static float Motor_ControlSpeedLoopStep(float target_speed_rad_s, float measured_speed_rad_s)
@@ -315,6 +363,11 @@ void Motor_ControlInit(void)
     m_i32SpeedTargetFinalDegS = 0;
     m_f32SpeedTargetFinalRadS = 0.0f;
     m_f32SpeedTargetRadS = 0.0f;
+    m_u8ControlMode = APP_CONTROL_MODE_SPEED;
+    m_i32PositionTargetDeg = 0;
+    m_f32PositionTargetRad = 0.0f;
+    m_f32PositionErrorRad = 0.0f;
+    m_u8PositionDone = 0U;
     Motor_ControlResetSpeedLoop();
 
     Motor_FOC_Init();
@@ -405,6 +458,13 @@ void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
         return;
     }
 
+    if (m_u8ControlMode == APP_CONTROL_MODE_POSITION) {
+        m_f32SpeedTargetFinalRadS = Motor_ControlPositionLoopStep();
+    } else {
+        m_f32PositionErrorRad = 0.0f;
+        m_u8PositionDone = 0U;
+    }
+
     m_f32SpeedTargetRadS = Motor_ControlUpdateSpeedRamp(m_f32SpeedTargetRadS,
                                                         m_f32SpeedTargetFinalRadS);
 
@@ -473,6 +533,9 @@ void Motor_ControlSetSpeedTargetDegS(int32_t speed_target_deg_s)
 
     m_i32SpeedTargetFinalDegS = speed_target_deg_s;
     m_f32SpeedTargetFinalRadS = ((float)speed_target_deg_s) * APP_TWO_PI / 360.0f;
+    m_u8ControlMode = APP_CONTROL_MODE_SPEED;
+    m_f32PositionErrorRad = 0.0f;
+    m_u8PositionDone = 0U;
 
     if (speed_target_deg_s == 0) {
         m_f32SpeedTargetRadS = 0.0f;
@@ -484,6 +547,21 @@ void Motor_ControlSetSpeedTargetDegS(int32_t speed_target_deg_s)
                 ((old_speed_target < 0) && (speed_target_deg_s > 0)))) {
         m_u32StartupHoldUntilTick = m_u32ControlTick + APP_STARTUP_HOLD_TICKS;
     }
+}
+
+void Motor_ControlSetPositionTargetDeg(int32_t position_target_deg)
+{
+    int32_t pos_deg = position_target_deg % 360;
+
+    if (pos_deg < 0) {
+        pos_deg += 360;
+    }
+
+    m_u8ControlMode = APP_CONTROL_MODE_POSITION;
+    m_i32PositionTargetDeg = pos_deg;
+    m_f32PositionTargetRad = ((float)pos_deg) * APP_TWO_PI / 360.0f;
+    m_u8PositionDone = 0U;
+    m_u32StartupHoldUntilTick = m_u32ControlTick + APP_STARTUP_HOLD_TICKS;
 }
 
 /* 锁存故障并强制PWM进入安全共模输出。 */
@@ -541,6 +619,9 @@ void Motor_ControlGetDebug(motor_control_debug_t *debug)
     debug->speed_final_deg_s = m_i32SpeedTargetFinalDegS;
     debug->speed_target_rad_s = m_f32SpeedTargetRadS;
     debug->speed_error_rad_s = m_f32SpeedErrorRadS;
+    debug->control_mode = m_u8ControlMode;
+    debug->position_final_deg = m_i32PositionTargetDeg;
+    debug->position_error_rad = m_f32PositionErrorRad;
     debug->adc_raw_u = m_u16AdcRawU;
     debug->adc_raw_v = m_u16AdcRawV;
     debug->adc_raw_w = m_u16AdcRawW;

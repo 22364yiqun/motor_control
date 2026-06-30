@@ -127,29 +127,54 @@ void App_USART1RxCommandTask(void)
     while (App_USART1RxRingPop(&ch) == LL_OK) {
         if ((ch == '\r') || (ch == '\n')) {
             if (cmd_len > 0UL) {
-                int32_t cmd_deg_s;
+                int32_t cmd_value;
                 char str_cmd[16];
-                char ack[48];
+                char ack[64];
                 uint32_t idx = 0UL;
+                uint8_t is_position_cmd = 0U;
+                uint8_t is_speed_cmd = 0U;
+                const char *parse_str = cmd_buf;
 
                 cmd_buf[cmd_len] = '\0';
-                if (App_ParseI32Line(cmd_buf, &cmd_deg_s) != 0U) {
-                    Motor_ControlSetSpeedTargetDegS(cmd_deg_s);
-                    if (cmd_deg_s > APP_SPEED_CMD_ABS_MAX_DEG_S) {
-                        cmd_deg_s = APP_SPEED_CMD_ABS_MAX_DEG_S;
-                    } else if (cmd_deg_s < -APP_SPEED_CMD_ABS_MAX_DEG_S) {
-                        cmd_deg_s = -APP_SPEED_CMD_ABS_MAX_DEG_S;
-                    }
-                    (void)App_I32ToDecStr(str_cmd, cmd_deg_s);
+                if ((cmd_buf[0] == 'p') || (cmd_buf[0] == 'P')) {
+                    is_position_cmd = 1U;
+                    parse_str = &cmd_buf[1];
+                } else if ((cmd_buf[0] == 's') || (cmd_buf[0] == 'S')) {
+                    is_speed_cmd = 1U;
+                    parse_str = &cmd_buf[1];
+                } else {
+                    is_speed_cmd = 1U;
+                }
+
+                if (App_ParseI32Line(parse_str, &cmd_value) != 0U) {
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { ack[idx++] = *p++; } } while (0)
-                    APPEND_STR("CMD speed=");
-                    APPEND_STR(str_cmd);
-                    APPEND_STR(" deg/s\r\n");
+                    if (is_position_cmd != 0U) {
+                        int32_t pos_deg = cmd_value % 360;
+                        if (pos_deg < 0) {
+                            pos_deg += 360;
+                        }
+                        Motor_ControlSetPositionTargetDeg(cmd_value);
+                        (void)App_I32ToDecStr(str_cmd, pos_deg);
+                        APPEND_STR("CMD pos=");
+                        APPEND_STR(str_cmd);
+                        APPEND_STR(" deg\r\n");
+                    } else if (is_speed_cmd != 0U) {
+                        Motor_ControlSetSpeedTargetDegS(cmd_value);
+                        if (cmd_value > APP_SPEED_CMD_ABS_MAX_DEG_S) {
+                            cmd_value = APP_SPEED_CMD_ABS_MAX_DEG_S;
+                        } else if (cmd_value < -APP_SPEED_CMD_ABS_MAX_DEG_S) {
+                            cmd_value = -APP_SPEED_CMD_ABS_MAX_DEG_S;
+                        }
+                        (void)App_I32ToDecStr(str_cmd, cmd_value);
+                        APPEND_STR("CMD speed=");
+                        APPEND_STR(str_cmd);
+                        APPEND_STR(" deg/s\r\n");
+                    }
                     ack[idx] = '\0';
 #undef APPEND_STR
                     App_USART1SendString(ack);
                 } else {
-                    App_USART1SendString("ERR: send integer deg/s, e.g. 20 or -20 or 0\r\n");
+                    App_USART1SendString("ERR: send speed 20/-20/0 or position p90\r\n");
                 }
             }
             cmd_len = 0UL;
@@ -159,7 +184,8 @@ void App_USART1RxCommandTask(void)
             }
         } else if ((ch == ' ') || (ch == '\t')) {
             /* Ignore whitespace. */
-        } else if (((ch >= '0') && (ch <= '9')) || (ch == '-') || (ch == '+')) {
+        } else if (((ch >= '0') && (ch <= '9')) || (ch == '-') || (ch == '+') ||
+                   (ch == 'p') || (ch == 'P') || (ch == 's') || (ch == 'S')) {
             if (cmd_len < (APP_USART_CMD_BUF_LEN - 1UL)) {
                 cmd_buf[cmd_len++] = ch;
             } else {

@@ -208,6 +208,9 @@ void Encoder_StatusPrintTask(void)
     char pos_x100[12];
     char vel_x10[12];
     char state[4];
+    char mode[4];
+    char pos_cmd[12];
+    char pos_err_x100[12];
     char cmd_spd_x10[12];
     char ref_spd_x10[12];
     char spd_err_x10[12];
@@ -243,6 +246,9 @@ void Encoder_StatusPrintTask(void)
     (void)App_U32ToDecStr(pos_x100, ((uint32_t)m_u16RawAngle14 * 36000UL) / 16384UL);
     (void)App_I32ToDecStr(vel_x10, (int32_t)(m_f32MechSpeedRadS * 572.957795f));
     (void)App_U32ToDecStr(state, (uint32_t)control_debug.foc_state);
+    (void)App_U32ToDecStr(mode, (uint32_t)control_debug.control_mode);
+    (void)App_I32ToDecStr(pos_cmd, control_debug.position_final_deg);
+    (void)App_I32ToDecStr(pos_err_x100, (int32_t)(control_debug.position_error_rad * 5729.57795f));
     (void)App_I32ToDecStr(cmd_spd_x10, control_debug.speed_final_deg_s * 10);
     (void)App_I32ToDecStr(ref_spd_x10, (int32_t)(control_debug.speed_target_rad_s * 572.957795f));
     (void)App_I32ToDecStr(spd_err_x10, (int32_t)(control_debug.speed_error_rad_s * 572.957795f));
@@ -268,6 +274,8 @@ void Encoder_StatusPrintTask(void)
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { line[idx++] = *p++; } } while (0)
     APPEND_STR("st=");
     APPEND_STR(state);
+    APPEND_STR(", mode=");
+    APPEND_STR(mode);
     APPEND_STR(", spi=");
     if (m_i32DmaStatus == 0) {
         APPEND_STR("OK");
@@ -280,6 +288,10 @@ void Encoder_StatusPrintTask(void)
     APPEND_STR(raw14);
     APPEND_STR(", posX100=");
     APPEND_STR(pos_x100);
+    APPEND_STR(", posCmd=");
+    APPEND_STR(pos_cmd);
+    APPEND_STR(", posErrX100=");
+    APPEND_STR(pos_err_x100);
     APPEND_STR(", velX10=");
     APPEND_STR(vel_x10);
     APPEND_STR(", cmdSpdX10=");

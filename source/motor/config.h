@@ -68,6 +68,18 @@
 #define APP_STARTUP_EXIT_SPEED_DEG_S    (45.0f)
 #define APP_STARTUP_EXIT_SPEED_RAD_S    (APP_STARTUP_EXIT_SPEED_DEG_S * APP_TWO_PI / 360.0f)
 
+/* Position outer loop. p90 means one-turn absolute mechanical position 90 deg. */
+#define APP_CONTROL_MODE_SPEED          (0U)
+#define APP_CONTROL_MODE_POSITION       (1U)
+#define APP_POSITION_KP_SPEED           (4.0f)
+#define APP_POSITION_KD_SPEED           (0.20f)
+#define APP_POSITION_SPEED_LIMIT_DEG_S  (80.0f)
+#define APP_POSITION_SPEED_LIMIT_RAD_S  (APP_POSITION_SPEED_LIMIT_DEG_S * APP_TWO_PI / 360.0f)
+#define APP_POSITION_DONE_BAND_DEG      (1.0f)
+#define APP_POSITION_DONE_BAND_RAD      (APP_POSITION_DONE_BAND_DEG * APP_TWO_PI / 360.0f)
+#define APP_POSITION_RESTART_BAND_DEG   (3.0f)
+#define APP_POSITION_RESTART_BAND_RAD   (APP_POSITION_RESTART_BAND_DEG * APP_TWO_PI / 360.0f)
+
 /* MA732的SPI-DMA参数 */
 #define MA732_CS_PORT                   (GPIO_PORT_B)
 #define MA732_CS_PIN                    (GPIO_PIN_05)
