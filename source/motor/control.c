@@ -37,6 +37,13 @@ static uint32_t m_u32OffsetCnt = 0UL;
 static volatile int32_t m_i32IqRefFinalMA = 0;      /* 串口输入的Iq目标值，单位mA。 */
 static volatile float m_f32IqRefFinalA = 0.0f;      /* 串口Iq目标值换算成A。 */
 static volatile float m_f32IqRefA = 0.0f;           /* 经过斜坡后的Iq参考值。 */
+static volatile int32_t m_i32SpeedTargetFinalDegS = 0;
+static volatile float m_f32SpeedTargetFinalRadS = 0.0f;
+static volatile float m_f32SpeedTargetRadS = 0.0f;
+static volatile float m_f32SpeedErrorRadS = 0.0f;
+static float m_f32SpeedIntegralIqA = 0.0f;
+static uint16_t m_u16SpeedLoopDiv = 0U;
+static uint32_t m_u32StartupHoldUntilTick = 0UL;
 
 static float Motor_ControlWrapTwoPi(float angle)
 {
@@ -141,6 +148,94 @@ static float Motor_ControlUpdateIqRamp(float current_iq_a, float final_iq_a)
     return Motor_ControlClamp(current_iq_a, -APP_CURRENT_REF_ABS_MAX_A, APP_CURRENT_REF_ABS_MAX_A);
 }
 
+static float Motor_ControlUpdateSpeedRamp(float current_speed_rad_s, float final_speed_rad_s)
+{
+    const float max_step = APP_SPEED_RAMP_RAD_S2 * APP_CONTROL_TS;
+    const float err = final_speed_rad_s - current_speed_rad_s;
+
+    if (err > max_step) {
+        current_speed_rad_s += max_step;
+    } else if (err < -max_step) {
+        current_speed_rad_s -= max_step;
+    } else {
+        current_speed_rad_s = final_speed_rad_s;
+    }
+
+    return current_speed_rad_s;
+}
+
+static void Motor_ControlResetSpeedLoop(void)
+{
+    m_f32SpeedIntegralIqA = 0.0f;
+    m_f32SpeedErrorRadS = 0.0f;
+    m_u16SpeedLoopDiv = 0U;
+    m_u32StartupHoldUntilTick = 0UL;
+}
+
+static float Motor_ControlSpeedLoopStep(float target_speed_rad_s, float measured_speed_rad_s)
+{
+    float err = target_speed_rad_s - measured_speed_rad_s;
+    float err_limited;
+    float iq_target_a;
+
+    m_f32SpeedErrorRadS = err;
+    err_limited = Motor_ControlClamp(err,
+                                     -APP_SPEED_ERR_CLAMP_RAD_S,
+                                      APP_SPEED_ERR_CLAMP_RAD_S);
+
+    if ((target_speed_rad_s > APP_SPEED_ZERO_BAND_RAD_S) ||
+        (target_speed_rad_s < -APP_SPEED_ZERO_BAND_RAD_S)) {
+        m_f32SpeedIntegralIqA += APP_SPEED_KI_IQ * err_limited * APP_SPEED_LOOP_TS;
+        if (target_speed_rad_s > APP_SPEED_ZERO_BAND_RAD_S) {
+            m_f32SpeedIntegralIqA = Motor_ControlClamp(m_f32SpeedIntegralIqA,
+                                                       0.0f,
+                                                       APP_SPEED_IQ_LIMIT_A);
+        } else {
+            m_f32SpeedIntegralIqA = Motor_ControlClamp(m_f32SpeedIntegralIqA,
+                                                       -APP_SPEED_IQ_LIMIT_A,
+                                                       0.0f);
+        }
+    } else {
+        m_f32SpeedIntegralIqA = 0.0f;
+    }
+
+    iq_target_a = (APP_SPEED_KP_IQ * err_limited) + m_f32SpeedIntegralIqA;
+    if (target_speed_rad_s > APP_SPEED_ZERO_BAND_RAD_S) {
+        iq_target_a += APP_RUN_FF_IQ_A;
+        if (iq_target_a < 0.0f) {
+            iq_target_a = 0.0f;
+        }
+    } else if (target_speed_rad_s < -APP_SPEED_ZERO_BAND_RAD_S) {
+        iq_target_a -= APP_RUN_FF_IQ_A;
+        if (iq_target_a > 0.0f) {
+            iq_target_a = 0.0f;
+        }
+    }
+
+    return Motor_ControlClamp(iq_target_a, -APP_SPEED_IQ_LIMIT_A, APP_SPEED_IQ_LIMIT_A);
+}
+
+static float Motor_ControlApplyStartupMinIq(float iq_target_a,
+                                            float target_speed_rad_s,
+                                            float measured_speed_rad_s)
+{
+    (void)measured_speed_rad_s;
+
+    if (m_u32ControlTick < m_u32StartupHoldUntilTick) {
+        if (target_speed_rad_s > APP_SPEED_ZERO_BAND_RAD_S) {
+            if (iq_target_a < APP_STARTUP_MIN_IQ_A) {
+                iq_target_a = APP_STARTUP_MIN_IQ_A;
+            }
+        } else if (target_speed_rad_s < -APP_SPEED_ZERO_BAND_RAD_S) {
+            if (iq_target_a > -APP_STARTUP_MIN_IQ_A) {
+                iq_target_a = -APP_STARTUP_MIN_IQ_A;
+            }
+        }
+    }
+
+    return Motor_ControlClamp(iq_target_a, -APP_SPEED_IQ_LIMIT_A, APP_SPEED_IQ_LIMIT_A);
+}
+
 /* 接近速度限制时削减加速方向转矩，制动方向转矩仍然允许。 */
 static float Motor_ControlApplyTorqueSpeedLimit(float iq_target_a)
 {
@@ -169,7 +264,9 @@ static float Motor_ControlApplyTorqueSpeedLimit(float iq_target_a)
 /* 判断Iq指令是否已经足够接近0，可关闭PWM输出。 */
 static uint8_t Motor_ControlIsTorqueZeroCommand(void)
 {
-    if ((m_i32IqRefFinalMA == 0) &&
+    if ((m_i32SpeedTargetFinalDegS == 0) &&
+        (m_f32SpeedTargetRadS < APP_SPEED_ZERO_BAND_RAD_S) &&
+        (m_f32SpeedTargetRadS > -APP_SPEED_ZERO_BAND_RAD_S) &&
         (m_f32IqRefA < APP_ZERO_IQ_OFF_BAND_A) &&
         (m_f32IqRefA > -APP_ZERO_IQ_OFF_BAND_A)) {
         return 1U;
@@ -215,6 +312,10 @@ void Motor_ControlInit(void)
     m_i32IqRefFinalMA = 0;
     m_f32IqRefFinalA = 0.0f;
     m_f32IqRefA = 0.0f;
+    m_i32SpeedTargetFinalDegS = 0;
+    m_f32SpeedTargetFinalRadS = 0.0f;
+    m_f32SpeedTargetRadS = 0.0f;
+    Motor_ControlResetSpeedLoop();
 
     Motor_FOC_Init();
     Motor_FOC_SafeOff();
@@ -267,6 +368,8 @@ void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
     if ((m_u8MotorEnable == 0U) || (m_u8FaultOverCurrent != 0U)) {
         run_tick = 0UL;
         current_loop_div_cnt = 0U;
+        m_f32SpeedTargetRadS = 0.0f;
+        Motor_ControlResetSpeedLoop();
         Motor_FOC_Reset();
         Motor_FOC_SafeOff();
         return;
@@ -288,10 +391,12 @@ void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
         m_u8EncoderZeroDone = 1U;
         m_f32ThetaE = 0.0f;
         m_f32IqRefA = 0.0f;
+        m_f32SpeedTargetRadS = 0.0f;
+        Motor_ControlResetSpeedLoop();
         Motor_FOC_Reset();
     }
 
-    m_u8FocState = APP_FOC_STATE_TORQUE;
+    m_u8FocState = APP_FOC_STATE_SPEED;
     theta = Motor_ControlGetElectricalAngle();
     m_f32ThetaE = theta;
 
@@ -300,11 +405,27 @@ void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
         return;
     }
 
+    m_f32SpeedTargetRadS = Motor_ControlUpdateSpeedRamp(m_f32SpeedTargetRadS,
+                                                        m_f32SpeedTargetFinalRadS);
+
+    m_u16SpeedLoopDiv++;
+    if (m_u16SpeedLoopDiv >= APP_SPEED_LOOP_DIV) {
+        const float measured_speed = Encoder_GetMechSpeedRadS();
+        float iq_target_a;
+
+        m_u16SpeedLoopDiv = 0U;
+        iq_target_a = Motor_ControlSpeedLoopStep(m_f32SpeedTargetRadS, measured_speed);
+        iq_target_a = Motor_ControlApplyStartupMinIq(iq_target_a,
+                                                     m_f32SpeedTargetRadS,
+                                                     measured_speed);
+        m_f32IqRefA = Motor_ControlClamp(iq_target_a,
+                                         -APP_SPEED_IQ_LIMIT_A,
+                                          APP_SPEED_IQ_LIMIT_A);
+    }
+
     current_loop_div_cnt++;
     if (current_loop_div_cnt >= APP_CURRENT_LOOP_DIV) {
-        const float limited_target = Motor_ControlApplyTorqueSpeedLimit(m_f32IqRefFinalA);
         current_loop_div_cnt = 0U;
-        m_f32IqRefA = Motor_ControlUpdateIqRamp(m_f32IqRefA, limited_target);
         Motor_FOC_SetCurrentRef(0.0f, m_f32IqRefA);
     }
 
@@ -337,6 +458,31 @@ void Motor_ControlSetIqTargetMA(int32_t iq_target_ma)
         (iq_target_ma == 0)) {
         m_f32IqRefA = 0.0f;
         Motor_FOC_Reset();
+    }
+}
+
+void Motor_ControlSetSpeedTargetDegS(int32_t speed_target_deg_s)
+{
+    const int32_t old_speed_target = m_i32SpeedTargetFinalDegS;
+
+    if (speed_target_deg_s > APP_SPEED_CMD_ABS_MAX_DEG_S) {
+        speed_target_deg_s = APP_SPEED_CMD_ABS_MAX_DEG_S;
+    } else if (speed_target_deg_s < -APP_SPEED_CMD_ABS_MAX_DEG_S) {
+        speed_target_deg_s = -APP_SPEED_CMD_ABS_MAX_DEG_S;
+    }
+
+    m_i32SpeedTargetFinalDegS = speed_target_deg_s;
+    m_f32SpeedTargetFinalRadS = ((float)speed_target_deg_s) * APP_TWO_PI / 360.0f;
+
+    if (speed_target_deg_s == 0) {
+        m_f32SpeedTargetRadS = 0.0f;
+        m_f32IqRefA = 0.0f;
+        Motor_ControlResetSpeedLoop();
+        Motor_FOC_Reset();
+    } else if (((old_speed_target == 0) ||
+                ((old_speed_target > 0) && (speed_target_deg_s < 0)) ||
+                ((old_speed_target < 0) && (speed_target_deg_s > 0)))) {
+        m_u32StartupHoldUntilTick = m_u32ControlTick + APP_STARTUP_HOLD_TICKS;
     }
 }
 
@@ -392,6 +538,9 @@ void Motor_ControlGetDebug(motor_control_debug_t *debug)
     debug->offset_done = m_u8OffsetDone;
     debug->iq_final_ma = m_i32IqRefFinalMA;
     debug->iq_ref_a = m_f32IqRefA;
+    debug->speed_final_deg_s = m_i32SpeedTargetFinalDegS;
+    debug->speed_target_rad_s = m_f32SpeedTargetRadS;
+    debug->speed_error_rad_s = m_f32SpeedErrorRadS;
     debug->adc_raw_u = m_u16AdcRawU;
     debug->adc_raw_v = m_u16AdcRawV;
     debug->adc_raw_w = m_u16AdcRawW;

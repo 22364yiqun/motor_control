@@ -33,6 +33,7 @@
 #define APP_FOC_STATE_ADC_OFFSET        (0U)
 #define APP_FOC_STATE_ALIGN             (1U)
 #define APP_FOC_STATE_TORQUE            (2U)
+#define APP_FOC_STATE_SPEED             (2U)
 #define APP_FOC_STATE_FAULT             (3U)
 
 /* 编码器 */
@@ -42,7 +43,30 @@
 #define APP_ENCODER_PREDICT_ENABLE      (1U)           /* 两次MA732读取之间是否做角度预测。 */
 #define APP_ENCODER_PREDICT_MAX_TICK    (400UL)        /* 角度预测最大时间钳位。 */
 #define APP_ENCODER_STALE_FAULT_TICK    (4000UL)       /* 编码器长时间未更新则进入故障。 */
-#define APP_SPEED_LPF_ALPHA             (0.02f)        /* 机械速度低通滤波系数。 */
+#define APP_SPEED_LPF_ALPHA             (0.015f)       /* 机械速度低通滤波系数。 */
+#define APP_SPEED_RAW_CLAMP_DEG_S       (600.0f)       /* 单次速度估算限幅，抑制编码器偶发跳变。 */
+#define APP_SPEED_RAW_CLAMP_RAD_S       (APP_SPEED_RAW_CLAMP_DEG_S * APP_TWO_PI / 360.0f)
+#define APP_SPEED_ACCEL_CLAMP_DEG_S2    (4000.0f)      /* 速度估算最大加速度，抑制速度打印和速度环毛刺。 */
+#define APP_SPEED_ACCEL_CLAMP_RAD_S2    (APP_SPEED_ACCEL_CLAMP_DEG_S2 * APP_TWO_PI / 360.0f)
+
+/* 速度外环参数。串口速度模式输入机械 deg/s，速度PI输出Iq参考电流而不是Vq电压。 */
+#define APP_SPEED_CMD_ABS_MAX_DEG_S     (300)
+#define APP_SPEED_RAMP_DEG_S2           (1000.0f)
+#define APP_SPEED_RAMP_RAD_S2           (APP_SPEED_RAMP_DEG_S2 * APP_TWO_PI / 360.0f)
+#define APP_SPEED_LOOP_DIV              (20U)
+#define APP_SPEED_LOOP_TS               (APP_CONTROL_TS * (float)APP_SPEED_LOOP_DIV)
+#define APP_SPEED_ERR_CLAMP_DEG_S       (300.0f)
+#define APP_SPEED_ERR_CLAMP_RAD_S       (APP_SPEED_ERR_CLAMP_DEG_S * APP_TWO_PI / 360.0f)
+#define APP_SPEED_KP_IQ                 (0.0012f)
+#define APP_SPEED_KI_IQ                 (0.004f)
+#define APP_SPEED_IQ_LIMIT_A            (0.120f)
+#define APP_SPEED_ZERO_BAND_DEG_S       (3.0f)
+#define APP_SPEED_ZERO_BAND_RAD_S       (APP_SPEED_ZERO_BAND_DEG_S * APP_TWO_PI / 360.0f)
+#define APP_RUN_FF_IQ_A                 (0.040f)       /* 运行摩擦补偿电流，避免低速转转停停。 */
+#define APP_STARTUP_MIN_IQ_A            (0.075f)
+#define APP_STARTUP_HOLD_TICKS          (8000UL)       /* 有速度指令后至少保持启动电流约0.4s。 */
+#define APP_STARTUP_EXIT_SPEED_DEG_S    (45.0f)
+#define APP_STARTUP_EXIT_SPEED_RAD_S    (APP_STARTUP_EXIT_SPEED_DEG_S * APP_TWO_PI / 360.0f)
 
 /* MA732的SPI-DMA参数 */
 #define MA732_CS_PORT                   (GPIO_PORT_B)

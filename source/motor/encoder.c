@@ -165,7 +165,22 @@ void Encoder_Task(void)
         if (dt_tick > 0UL) {
             const float delta_angle = Encoder_WrapPi(now_mech_angle_rad - last_mech_angle_rad);
             const float dt = (float)dt_tick * APP_CONTROL_TS;
-            const float speed_raw = delta_angle / dt;
+            const float max_speed_step = APP_SPEED_ACCEL_CLAMP_RAD_S2 * dt;
+            float speed_raw = delta_angle / dt;
+            float speed_err;
+
+            if (speed_raw > APP_SPEED_RAW_CLAMP_RAD_S) {
+                speed_raw = APP_SPEED_RAW_CLAMP_RAD_S;
+            } else if (speed_raw < -APP_SPEED_RAW_CLAMP_RAD_S) {
+                speed_raw = -APP_SPEED_RAW_CLAMP_RAD_S;
+            }
+
+            speed_err = speed_raw - m_f32MechSpeedRadS;
+            if (speed_err > max_speed_step) {
+                speed_raw = m_f32MechSpeedRadS + max_speed_step;
+            } else if (speed_err < -max_speed_step) {
+                speed_raw = m_f32MechSpeedRadS - max_speed_step;
+            }
 
             m_f32MechSpeedRadS = (APP_SPEED_LPF_ALPHA * speed_raw) +
                                  ((1.0f - APP_SPEED_LPF_ALPHA) * m_f32MechSpeedRadS);
@@ -188,11 +203,14 @@ void Encoder_StatusPrintTask(void)
     motor_control_debug_t control_debug;
     motor_foc_debug_t foc_debug;
 
-    char line[360];
+    char line[448];
     char raw14[8];
     char pos_x100[12];
     char vel_x10[12];
     char state[4];
+    char cmd_spd_x10[12];
+    char ref_spd_x10[12];
+    char spd_err_x10[12];
     char cmd_iq_ma[12];
     char ref_iq_ma[12];
     char id_ma[12];
@@ -225,6 +243,9 @@ void Encoder_StatusPrintTask(void)
     (void)App_U32ToDecStr(pos_x100, ((uint32_t)m_u16RawAngle14 * 36000UL) / 16384UL);
     (void)App_I32ToDecStr(vel_x10, (int32_t)(m_f32MechSpeedRadS * 572.957795f));
     (void)App_U32ToDecStr(state, (uint32_t)control_debug.foc_state);
+    (void)App_I32ToDecStr(cmd_spd_x10, control_debug.speed_final_deg_s * 10);
+    (void)App_I32ToDecStr(ref_spd_x10, (int32_t)(control_debug.speed_target_rad_s * 572.957795f));
+    (void)App_I32ToDecStr(spd_err_x10, (int32_t)(control_debug.speed_error_rad_s * 572.957795f));
     (void)App_I32ToDecStr(cmd_iq_ma, control_debug.iq_final_ma);
     (void)App_I32ToDecStr(ref_iq_ma, (int32_t)(foc_debug.iq_ref_a * 1000.0f));
     (void)App_I32ToDecStr(id_ma, (int32_t)(foc_debug.id_a * 1000.0f));
@@ -261,6 +282,12 @@ void Encoder_StatusPrintTask(void)
     APPEND_STR(pos_x100);
     APPEND_STR(", velX10=");
     APPEND_STR(vel_x10);
+    APPEND_STR(", cmdSpdX10=");
+    APPEND_STR(cmd_spd_x10);
+    APPEND_STR(", refSpdX10=");
+    APPEND_STR(ref_spd_x10);
+    APPEND_STR(", spdErrX10=");
+    APPEND_STR(spd_err_x10);
     APPEND_STR(", cmdIqMA=");
     APPEND_STR(cmd_iq_ma);
     APPEND_STR(", refIqMA=");

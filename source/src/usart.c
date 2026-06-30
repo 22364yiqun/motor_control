@@ -127,29 +127,29 @@ void App_USART1RxCommandTask(void)
     while (App_USART1RxRingPop(&ch) == LL_OK) {
         if ((ch == '\r') || (ch == '\n')) {
             if (cmd_len > 0UL) {
-                int32_t cmd_ma;
+                int32_t cmd_deg_s;
                 char str_cmd[16];
                 char ack[48];
                 uint32_t idx = 0UL;
 
                 cmd_buf[cmd_len] = '\0';
-                if (App_ParseI32Line(cmd_buf, &cmd_ma) != 0U) {
-                    Motor_ControlSetIqTargetMA(cmd_ma);
-                    if (cmd_ma > APP_TORQUE_CMD_ABS_MAX_MA) {
-                        cmd_ma = APP_TORQUE_CMD_ABS_MAX_MA;
-                    } else if (cmd_ma < -APP_TORQUE_CMD_ABS_MAX_MA) {
-                        cmd_ma = -APP_TORQUE_CMD_ABS_MAX_MA;
+                if (App_ParseI32Line(cmd_buf, &cmd_deg_s) != 0U) {
+                    Motor_ControlSetSpeedTargetDegS(cmd_deg_s);
+                    if (cmd_deg_s > APP_SPEED_CMD_ABS_MAX_DEG_S) {
+                        cmd_deg_s = APP_SPEED_CMD_ABS_MAX_DEG_S;
+                    } else if (cmd_deg_s < -APP_SPEED_CMD_ABS_MAX_DEG_S) {
+                        cmd_deg_s = -APP_SPEED_CMD_ABS_MAX_DEG_S;
                     }
-                    (void)App_I32ToDecStr(str_cmd, cmd_ma);
+                    (void)App_I32ToDecStr(str_cmd, cmd_deg_s);
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { ack[idx++] = *p++; } } while (0)
-                    APPEND_STR("CMD Iq=");
+                    APPEND_STR("CMD speed=");
                     APPEND_STR(str_cmd);
-                    APPEND_STR(" mA\r\n");
+                    APPEND_STR(" deg/s\r\n");
                     ack[idx] = '\0';
 #undef APPEND_STR
                     App_USART1SendString(ack);
                 } else {
-                    App_USART1SendString("ERR: send integer mA, e.g. 10 or -10 or 0\r\n");
+                    App_USART1SendString("ERR: send integer deg/s, e.g. 20 or -20 or 0\r\n");
                 }
             }
             cmd_len = 0UL;

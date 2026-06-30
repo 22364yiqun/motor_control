@@ -65,7 +65,7 @@ int main(void)
     /* Register write protected for some required peripherals. */
     LL_PERIPH_WP(LL_PERIPH_ALL);
 
-    App_USART1SendString("UART-IRQ commanded speed closed-loop voltage-mode FOC start\r\n");
+    App_USART1SendString("UART-IRQ speed-current dual-loop FOC start\r\n");
     App_USART1SendString("Input integer deg/s, e.g. 20, -20, 0, then Enter.\r\n");
 
     for (;;) {
