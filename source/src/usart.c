@@ -74,17 +74,18 @@ void USART1_RxIrqCallback(void)
     }
 }
 
-static uint8_t App_ParseI32Line(const char *str, int32_t *value)
+static uint8_t App_ParseI32Field(const char **str, int32_t *value)
 {
     uint8_t negative = 0U;
     uint8_t has_digit = 0U;
     int32_t out = 0;
-    const char *p = str;
+    const char *p;
 
-    if ((str == NULL) || (value == NULL)) {
+    if ((str == NULL) || (*str == NULL) || (value == NULL)) {
         return 0U;
     }
 
+    p = *str;
     if (*p == '-') {
         negative = 1U;
         p++;
@@ -92,10 +93,7 @@ static uint8_t App_ParseI32Line(const char *str, int32_t *value)
         p++;
     }
 
-    while (*p != '\0') {
-        if ((*p < '0') || (*p > '9')) {
-            return 0U;
-        }
+    while ((*p >= '0') && (*p <= '9')) {
         has_digit = 1U;
         out = (out * 10) + (int32_t)(*p - '0');
         if (out > 100000) {
@@ -109,7 +107,54 @@ static uint8_t App_ParseI32Line(const char *str, int32_t *value)
     }
 
     *value = (negative != 0U) ? -out : out;
+    *str = p;
     return 1U;
+}
+
+/* MIT命令解析：m位置deg[,目标速度deg/s[,前馈力矩mN*m]]，例如 m90 或 m90,0,0。 */
+static uint8_t App_ParseMitLine(const char *str,
+                                int32_t *position_deg,
+                                int32_t *velocity_deg_s,
+                                int32_t *tau_ff_mnm)
+{
+    const char *p = str;
+
+    if ((position_deg == NULL) || (velocity_deg_s == NULL) || (tau_ff_mnm == NULL)) {
+        return 0U;
+    }
+
+    *velocity_deg_s = 0;
+    *tau_ff_mnm = 0;
+
+    if (App_ParseI32Field(&p, position_deg) == 0U) {
+        return 0U;
+    }
+
+    if (*p == '\0') {
+        return 1U;
+    }
+    if (*p != ',') {
+        return 0U;
+    }
+    p++;
+
+    if (App_ParseI32Field(&p, velocity_deg_s) == 0U) {
+        return 0U;
+    }
+
+    if (*p == '\0') {
+        return 1U;
+    }
+    if (*p != ',') {
+        return 0U;
+    }
+    p++;
+
+    if (App_ParseI32Field(&p, tau_ff_mnm) == 0U) {
+        return 0U;
+    }
+
+    return (*p == '\0') ? 1U : 0U;
 }
 
 void App_USART1RxCommandTask(void)
@@ -127,54 +172,46 @@ void App_USART1RxCommandTask(void)
     while (App_USART1RxRingPop(&ch) == LL_OK) {
         if ((ch == '\r') || (ch == '\n')) {
             if (cmd_len > 0UL) {
-                int32_t cmd_value;
                 char str_cmd[16];
-                char ack[64];
+                char ack[96];
                 uint32_t idx = 0UL;
-                uint8_t is_position_cmd = 0U;
-                uint8_t is_speed_cmd = 0U;
                 const char *parse_str = cmd_buf;
 
                 cmd_buf[cmd_len] = '\0';
-                if ((cmd_buf[0] == 'p') || (cmd_buf[0] == 'P')) {
-                    is_position_cmd = 1U;
-                    parse_str = &cmd_buf[1];
-                } else if ((cmd_buf[0] == 's') || (cmd_buf[0] == 'S')) {
-                    is_speed_cmd = 1U;
+                if ((cmd_buf[0] == 'm') || (cmd_buf[0] == 'M')) {
                     parse_str = &cmd_buf[1];
                 } else {
-                    is_speed_cmd = 1U;
+                    parse_str = cmd_buf;
                 }
 
-                if (App_ParseI32Line(parse_str, &cmd_value) != 0U) {
+                {
+                    int32_t pos_deg;
+                    int32_t vel_deg_s;
+                    int32_t tau_ff_mnm;
+
+                    if (App_ParseMitLine(parse_str, &pos_deg, &vel_deg_s, &tau_ff_mnm) != 0U) {
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { ack[idx++] = *p++; } } while (0)
-                    if (is_position_cmd != 0U) {
-                        int32_t pos_deg = cmd_value % 360;
-                        if (pos_deg < 0) {
-                            pos_deg += 360;
+                        int32_t pos_print = pos_deg % 360;
+                        if (pos_print < 0) {
+                            pos_print += 360;
                         }
-                        Motor_ControlSetPositionTargetDeg(cmd_value);
-                        (void)App_I32ToDecStr(str_cmd, pos_deg);
-                        APPEND_STR("CMD pos=");
+                        Motor_ControlSetMitTarget(pos_deg, vel_deg_s, tau_ff_mnm);
+                        (void)App_I32ToDecStr(str_cmd, pos_print);
+                        APPEND_STR("CMD mit pos=");
                         APPEND_STR(str_cmd);
-                        APPEND_STR(" deg\r\n");
-                    } else if (is_speed_cmd != 0U) {
-                        Motor_ControlSetSpeedTargetDegS(cmd_value);
-                        if (cmd_value > APP_SPEED_CMD_ABS_MAX_DEG_S) {
-                            cmd_value = APP_SPEED_CMD_ABS_MAX_DEG_S;
-                        } else if (cmd_value < -APP_SPEED_CMD_ABS_MAX_DEG_S) {
-                            cmd_value = -APP_SPEED_CMD_ABS_MAX_DEG_S;
-                        }
-                        (void)App_I32ToDecStr(str_cmd, cmd_value);
-                        APPEND_STR("CMD speed=");
+                        (void)App_I32ToDecStr(str_cmd, vel_deg_s);
+                        APPEND_STR(" deg vel=");
                         APPEND_STR(str_cmd);
-                        APPEND_STR(" deg/s\r\n");
-                    }
-                    ack[idx] = '\0';
+                        (void)App_I32ToDecStr(str_cmd, tau_ff_mnm);
+                        APPEND_STR(" deg/s tauFF=");
+                        APPEND_STR(str_cmd);
+                        APPEND_STR(" mNm\r\n");
+                        ack[idx] = '\0';
+                        App_USART1SendString(ack);
 #undef APPEND_STR
-                    App_USART1SendString(ack);
-                } else {
-                    App_USART1SendString("ERR: send speed 20/-20/0 or position p90\r\n");
+                    } else {
+                        App_USART1SendString("ERR: MIT m90 or m90,0,0\r\n");
+                    }
                 }
             }
             cmd_len = 0UL;
@@ -185,7 +222,7 @@ void App_USART1RxCommandTask(void)
         } else if ((ch == ' ') || (ch == '\t')) {
             /* Ignore whitespace. */
         } else if (((ch >= '0') && (ch <= '9')) || (ch == '-') || (ch == '+') ||
-                   (ch == 'p') || (ch == 'P') || (ch == 's') || (ch == 'S')) {
+                   (ch == ',') || (ch == 'm') || (ch == 'M')) {
             if (cmd_len < (APP_USART_CMD_BUF_LEN - 1UL)) {
                 cmd_buf[cmd_len++] = ch;
             } else {

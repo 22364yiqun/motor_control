@@ -8,14 +8,16 @@ typedef struct {
     uint8_t motor_enable;
     uint8_t fault;
     uint8_t offset_done;
-    int32_t iq_final_ma;
     float iq_ref_a;
-    int32_t speed_final_deg_s;
-    float speed_target_rad_s;
-    float speed_error_rad_s;
     uint8_t control_mode;
     int32_t position_final_deg;
     float position_error_rad;
+    int32_t mit_velocity_final_deg_s;
+    float mit_velocity_target_rad_s;
+    float mit_tau_ff_nm;
+    float mit_tau_static_nm;
+    float mit_tau_out_ref_nm;
+    float mit_tau_motor_ref_nm;
     uint16_t adc_raw_u;
     uint16_t adc_raw_v;
     uint16_t adc_raw_w;
@@ -29,9 +31,9 @@ typedef struct {
 
 void Motor_ControlInit(void);
 void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w);
-void Motor_ControlSetIqTargetMA(int32_t iq_target_ma);
-void Motor_ControlSetSpeedTargetDegS(int32_t speed_target_deg_s);
-void Motor_ControlSetPositionTargetDeg(int32_t position_target_deg);
+void Motor_ControlSetMitTarget(int32_t position_target_deg,
+                               int32_t velocity_target_deg_s,
+                               int32_t tau_ff_mnm);
 void Motor_ControlEnterFault(void);
 void Motor_ControlSetElectricalAngle(float theta_e);
 uint8_t Motor_ControlIsEncoderZeroDone(void);

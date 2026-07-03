@@ -65,8 +65,8 @@ int main(void)
     /* Register write protected for some required peripherals. */
     LL_PERIPH_WP(LL_PERIPH_ALL);
 
-    App_USART1SendString("UART-IRQ speed-current dual-loop FOC start\r\n");
-    App_USART1SendString("Speed: 20/-20/0 or s20. Position: p90, p180.\r\n");
+    App_USART1SendString("UART-IRQ MIT FOC start\r\n");
+    App_USART1SendString("MIT command: m90 or m90,0,0. Format: mpos,vel,tauFFmNm.\r\n");
 
     for (;;) {
         App_USART1TxPumpInMainLoop();

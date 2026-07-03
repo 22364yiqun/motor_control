@@ -32,8 +32,7 @@
 /* FOC对应状态 */
 #define APP_FOC_STATE_ADC_OFFSET        (0U)
 #define APP_FOC_STATE_ALIGN             (1U)
-#define APP_FOC_STATE_TORQUE            (2U)
-#define APP_FOC_STATE_SPEED             (2U)
+#define APP_FOC_STATE_MIT               (2U)
 #define APP_FOC_STATE_FAULT             (3U)
 
 /* 编码器 */
@@ -49,36 +48,34 @@
 #define APP_SPEED_ACCEL_CLAMP_DEG_S2    (4000.0f)      /* 速度估算最大加速度，抑制速度打印和速度环毛刺。 */
 #define APP_SPEED_ACCEL_CLAMP_RAD_S2    (APP_SPEED_ACCEL_CLAMP_DEG_S2 * APP_TWO_PI / 360.0f)
 
-/* 速度外环参数。串口速度模式输入机械 deg/s，速度PI输出Iq参考电流而不是Vq电压。 */
-#define APP_SPEED_CMD_ABS_MAX_DEG_S     (300)
-#define APP_SPEED_RAMP_DEG_S2           (1000.0f)
-#define APP_SPEED_RAMP_RAD_S2           (APP_SPEED_RAMP_DEG_S2 * APP_TWO_PI / 360.0f)
-#define APP_SPEED_LOOP_DIV              (20U)
-#define APP_SPEED_LOOP_TS               (APP_CONTROL_TS * (float)APP_SPEED_LOOP_DIV)
-#define APP_SPEED_ERR_CLAMP_DEG_S       (300.0f)
-#define APP_SPEED_ERR_CLAMP_RAD_S       (APP_SPEED_ERR_CLAMP_DEG_S * APP_TWO_PI / 360.0f)
-#define APP_SPEED_KP_IQ                 (0.0012f)
-#define APP_SPEED_KI_IQ                 (0.004f)
-#define APP_SPEED_IQ_LIMIT_A            (0.120f)
-#define APP_SPEED_ZERO_BAND_DEG_S       (3.0f)
-#define APP_SPEED_ZERO_BAND_RAD_S       (APP_SPEED_ZERO_BAND_DEG_S * APP_TWO_PI / 360.0f)
-#define APP_RUN_FF_IQ_A                 (0.040f)       /* 运行摩擦补偿电流，避免低速转转停停。 */
-#define APP_STARTUP_MIN_IQ_A            (0.075f)
-#define APP_STARTUP_HOLD_TICKS          (8000UL)       /* 有速度指令后至少保持启动电流约0.4s。 */
-#define APP_STARTUP_EXIT_SPEED_DEG_S    (45.0f)
-#define APP_STARTUP_EXIT_SPEED_RAD_S    (APP_STARTUP_EXIT_SPEED_DEG_S * APP_TWO_PI / 360.0f)
-
-/* Position outer loop. p90 means one-turn absolute mechanical position 90 deg. */
-#define APP_CONTROL_MODE_SPEED          (0U)
-#define APP_CONTROL_MODE_POSITION       (1U)
-#define APP_POSITION_KP_SPEED           (4.0f)
-#define APP_POSITION_KD_SPEED           (0.20f)
-#define APP_POSITION_SPEED_LIMIT_DEG_S  (80.0f)
-#define APP_POSITION_SPEED_LIMIT_RAD_S  (APP_POSITION_SPEED_LIMIT_DEG_S * APP_TWO_PI / 360.0f)
-#define APP_POSITION_DONE_BAND_DEG      (1.0f)
-#define APP_POSITION_DONE_BAND_RAD      (APP_POSITION_DONE_BAND_DEG * APP_TWO_PI / 360.0f)
-#define APP_POSITION_RESTART_BAND_DEG   (3.0f)
-#define APP_POSITION_RESTART_BAND_RAD   (APP_POSITION_RESTART_BAND_DEG * APP_TWO_PI / 360.0f)
+/* MIT torque mode.
+ * tau_out = Kp * pos_err + Kd * vel_err + tau_ff
+ * tau_motor = tau_out / (gear_ratio * efficiency)
+ * iq_ref = tau_motor / Kt
+ */
+#define APP_CONTROL_MODE_MIT            (0U)
+#define APP_MIT_LOOP_DIV                (20U) // MIT环运行周期数，20次控制周期运行一次MIT环
+#define APP_MIT_KP_NM_PER_RAD           (0.006f)  // MIT环位置环比例系数
+#define APP_MIT_KD_NM_PER_RAD_S         (0.00020f) // MIT环速度环比例系数
+#define APP_MIT_GEAR_RATIO              (1.0f) // 减速比，电机转速/负载转速
+#define APP_MIT_TRANSMISSION_EFF        (1.0f) // 传动效率，0~1
+#define APP_MIT_MOTOR_KT_NM_PER_A       (0.080f) // 电机力矩常数，单位Nm/A
+#define APP_MIT_VEL_TARGET_LIMIT_DEG_S  (300) // MIT环目标速度限幅，单位deg/s
+#define APP_MIT_POS_ERR_CLAMP_DEG       (90.0f) // MIT环位置误差限幅，单位deg
+#define APP_MIT_POS_ERR_CLAMP_RAD       (APP_MIT_POS_ERR_CLAMP_DEG * APP_TWO_PI / 360.0f) // MIT环位置误差限幅，单位rad
+#define APP_MIT_VEL_ERR_CLAMP_DEG_S     (300.0f) // MIT环速度误差限幅，单位deg/s
+#define APP_MIT_VEL_ERR_CLAMP_RAD_S     (APP_MIT_VEL_ERR_CLAMP_DEG_S * APP_TWO_PI / 360.0f)
+#define APP_MIT_TAU_OUT_LIMIT_NM        (0.020f) // MIT环输出力矩限幅，单位Nm
+#define APP_MIT_IQ_LIMIT_A              (0.120f) // MIT环电流指令限幅，单位A
+#define APP_MIT_STATIC_FRICTION_NM      (0.003f)
+#define APP_MIT_STATIC_FRICTION_BAND_DEG (0.5f)
+#define APP_MIT_STATIC_FRICTION_BAND_RAD (APP_MIT_STATIC_FRICTION_BAND_DEG * APP_TWO_PI / 360.0f)
+#define APP_MIT_DONE_BAND_DEG           (0.3f) // MIT环完成位置误差带宽，单位deg
+#define APP_MIT_DONE_BAND_RAD           (APP_MIT_DONE_BAND_DEG * APP_TWO_PI / 360.0f) // MIT环完成位置误差带宽，单位rad
+#define APP_MIT_RESTART_BAND_DEG        (0.8f) // MIT环重新启动位置误差带宽，单位deg
+#define APP_MIT_RESTART_BAND_RAD        (APP_MIT_RESTART_BAND_DEG * APP_TWO_PI / 360.0f) // MIT环重新启动位置误差带宽，单位rad
+#define APP_MIT_DONE_SPEED_BAND_DEG_S   (3.0f) // MIT环完成速度误差带宽，单位deg/s
+#define APP_MIT_DONE_SPEED_BAND_RAD_S   (APP_MIT_DONE_SPEED_BAND_DEG_S * APP_TWO_PI / 360.0f)
 
 /* MA732的SPI-DMA参数 */
 #define MA732_CS_PORT                   (GPIO_PORT_B)
@@ -106,20 +103,10 @@
 #define ADC_CURRENT_DIV                 (0.004f)
 
 /* 电流指令和保护 */
-#define APP_TORQUE_CMD_ABS_MAX_MA       (480)          /* 串口Iq指令最大值，单位mA。 */
-#define APP_CURRENT_REF_ABS_MAX_A       (0.480f)       /* Id/Iq参考电流最大值。 */
 #define APP_CURRENT_ABS_FAULT_A         (0.900f)       /* 相电流过流阈值。 */
 #define APP_CURRENT_CNT_FAULT           (180)          /* 去零点后的ADC计数故障阈值。 */
 #define APP_CURRENT_SUM_FAULT_A         (0.350f)       /* ia+ib+ic一致性检查阈值。 */
 #define APP_ZERO_IQ_OFF_BAND_A          (0.001f)       /* Iq小于该值时认为指令已经回到零。 */
-#define APP_IQ_RAMP_A_PER_S             (0.240f)       /* Iq指令斜坡变化率。 */
-#define APP_IQ_RAMP_A_PER_TICK          (APP_IQ_RAMP_A_PER_S * APP_CONTROL_TS)
-
-/* 转矩模式速度限制 */
-#define APP_TORQUE_SPEED_LIMIT_DEG_S       (500.0f) // 
-#define APP_TORQUE_SPEED_LIMIT_RAD_S       (APP_TORQUE_SPEED_LIMIT_DEG_S * APP_TWO_PI / 360.0f)
-#define APP_TORQUE_SPEED_LIMIT_BAND_DEG_S  (200.0f) //
-#define APP_TORQUE_SPEED_LIMIT_BAND_RAD_S  (APP_TORQUE_SPEED_LIMIT_BAND_DEG_S * APP_TWO_PI / 360.0f)
 
 /* 电流环PI */
 #define APP_ID_KP                       (0.035f)       /* d轴电流PI比例系数。 */
@@ -131,7 +118,7 @@
 #define APP_CURRENT_V_VECTOR_LIMIT      (0.160f)       /* SVPWM前的dq电压矢量限幅。 */
 
 /* 串口参数 */
-#define APP_USART_CMD_BUF_LEN           (16U)
+#define APP_USART_CMD_BUF_LEN           (48U)
 #define APP_USART_RX_RING_SIZE          (128U)
 #define APP_USART_TX_RING_SIZE          (1024U)
 #define APP_USART_TX_PUMP_BYTES         (24U)
