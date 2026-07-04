@@ -5,6 +5,7 @@
 #include "hc32_ll.h"
 
 void CanCfg(void);
+void App_CANTask(void);
 
 #endif /* __CAN_H__ */
 

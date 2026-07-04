@@ -72,7 +72,7 @@ extern "C"
 #define LL_I2C_ENABLE                               (DDL_OFF)
 #define LL_INTERRUPTS_ENABLE                        (DDL_ON)
 #define LL_KEYSCAN_ENABLE                           (DDL_OFF)
-#define LL_MCAN_ENABLE                              (DDL_OFF)
+#define LL_MCAN_ENABLE                              (DDL_ON)
 #define LL_MPU_ENABLE                               (DDL_OFF)
 #define LL_PWC_ENABLE                               (DDL_ON)
 #define LL_QSPI_ENABLE                              (DDL_OFF)

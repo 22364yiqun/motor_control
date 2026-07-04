@@ -26,6 +26,7 @@
 #include "gpio.h"
 #include "config.h"
 #include "usart.h"
+#include "can.h"
 #include "adc.h"
 #include "control.h"
 #include "tim.h"
@@ -60,19 +61,23 @@ int main(void)
     Motor_ControlInit();
     //USARTx Config
     UsartCfg();
+    //CAN Config
+    CanCfg();
     //SPI Config
     SpiCfg();
     /* Register write protected for some required peripherals. */
     LL_PERIPH_WP(LL_PERIPH_ALL);
 
-    App_USART1SendString("UART-IRQ MIT FOC start\r\n");
-    App_USART1SendString("MIT command: m90 or m90,0,0. Format: mpos,vel,tauFFmNm.\r\n");
+    App_USART1SendString("CAN+UART MIT FOC start\r\n");
+    App_USART1SendString("UART: m90 or m90,0,0. CAN ID=0x201 DLC=8.\r\n");
 
     for (;;) {
         App_USART1TxPumpInMainLoop();
         App_USART1RxCommandTask();
+        App_CANTask();
         Encoder_Task();
         App_USART1RxCommandTask();
+        App_CANTask();
         Encoder_StatusPrintTask();
         App_USART1TxPumpInMainLoop();
     }

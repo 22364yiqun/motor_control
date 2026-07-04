@@ -46,6 +46,7 @@ static volatile float m_f32MitTauFfNm = 0.0f;
 static volatile float m_f32MitTauStaticNm = 0.0f;
 static volatile float m_f32MitTauOutRefNm = 0.0f;
 static volatile float m_f32MitTauMotorRefNm = 0.0f;
+static volatile uint8_t m_u8MitTargetValid = 0U;
 static volatile uint8_t m_u8MitDone = 0U;
 static uint16_t m_u16MitLoopDiv = 0U;
 
@@ -156,6 +157,18 @@ static float Motor_ControlMitLoopStep(void)
     float tau_out_nm;
     float tau_motor_nm;
     float iq_ref_a;
+
+    if (m_u8MitTargetValid == 0U) {
+        m_f32PositionTargetRad = measured_pos_rad;
+        m_i32PositionTargetDeg = (int32_t)(measured_pos_rad * 57.2957795f);
+        m_f32PositionErrorRad = 0.0f;
+        m_f32MitVelocityErrorRadS = 0.0f;
+        m_f32MitTauStaticNm = 0.0f;
+        m_f32MitTauOutRefNm = 0.0f;
+        m_f32MitTauMotorRefNm = 0.0f;
+        m_u8MitDone = 1U;
+        return 0.0f;
+    }
 
     if (abs_pos_err_rad < 0.0f) {
         abs_pos_err_rad = -abs_pos_err_rad;
@@ -268,6 +281,7 @@ void Motor_ControlInit(void)
     m_f32MitTauFfNm = 0.0f;
     m_f32MitTauOutRefNm = 0.0f;
     m_f32MitTauMotorRefNm = 0.0f;
+    m_u8MitTargetValid = 0U;
     m_u8MitDone = 0U;
     m_u16MitLoopDiv = 0U;
 
@@ -408,6 +422,7 @@ void Motor_ControlSetMitTarget(int32_t position_target_deg,
     m_f32IqRefA = 0.0f;
     m_f32MitTauOutRefNm = 0.0f;
     m_f32MitTauMotorRefNm = 0.0f;
+    m_u8MitTargetValid = 1U;
     m_u8MitDone = 0U;
     m_u16MitLoopDiv = 0U;
     Motor_FOC_Reset();

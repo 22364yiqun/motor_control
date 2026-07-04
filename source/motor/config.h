@@ -123,6 +123,41 @@
 #define APP_USART_TX_RING_SIZE          (1024U)
 #define APP_USART_TX_PUMP_BYTES         (24U)
 
+/* CAN MIT command input.
+ * ID 0x201, classic CAN, 8 bytes, little-endian:
+ * byte0-1: int16 pos_deg_x100
+ * byte2-3: int16 vel_deg_s_x10
+ * byte4-5: int16 tau_ff_mNm
+ * byte6:   command, 0 = MIT target
+ * byte7:   sequence/reserved
+ */
+#define APP_CAN_MIT_CMD_STD_ID          (0x201UL)
+#define APP_CAN_MIT_ACK_STD_ID          (0x202UL)
+#define APP_CAN_MIT_CMD_DLC             (MCAN_DLC8)
+#define APP_CAN_MIT_CMD_CODE            (0U)
+#define APP_CAN_RX_FIFO0_NUM            (4U)
+#define APP_CAN_TX_FIFO_NUM             (3U)
+#define APP_CAN_HEARTBEAT_ENABLE        (DDL_ON)
+#define APP_CAN_HEARTBEAT_TICKS         (10000UL)
+#define APP_CAN_NOMINAL_PRESCALER       (1U)
+/* XTAL=8MHz, HC32 DDL MCAN timing uses TimeSeg1 + TimeSeg2.
+ * 500k: prescaler=1, seg1=13, seg2=3, sjw=2
+ * 1M:   prescaler=1, seg1=6,  seg2=2, sjw=2
+ */
+#define APP_CAN_NOMINAL_TIME_SEG1       (6U)
+#define APP_CAN_NOMINAL_TIME_SEG2       (2U)
+#define APP_CAN_NOMINAL_SJW             (2U)
+
+/* CAN transceiver standby/enable control.
+ * Many CAN PHYs use STB high = standby, STB low = normal.
+ * Set APP_CAN_PHY_STB_CONTROL to DDL_ON after confirming the board pin.
+ */
+#define APP_CAN_PHY_STB_CONTROL         (DDL_OFF)
+#define APP_CAN_PHY_STB_PORT            (GPIO_PORT_B)
+#define APP_CAN_PHY_STB_PIN             (GPIO_PIN_03)
+#define APP_CAN_PHY_STB_ENABLE_LEVEL    (0U)
+#define APP_CAN_INTERNAL_LOOPBACK       (DDL_OFF)
+
 /* 状态打印 */
 #define APP_STATUS_PRINT_INTERVAL_TICKS (10000UL)
 

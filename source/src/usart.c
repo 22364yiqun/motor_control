@@ -111,7 +111,6 @@ static uint8_t App_ParseI32Field(const char **str, int32_t *value)
     return 1U;
 }
 
-/* MIT命令解析：m位置deg[,目标速度deg/s[,前馈力矩mN*m]]，例如 m90 或 m90,0,0。 */
 static uint8_t App_ParseMitLine(const char *str,
                                 int32_t *position_deg,
                                 int32_t *velocity_deg_s,
