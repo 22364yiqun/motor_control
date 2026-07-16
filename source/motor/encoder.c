@@ -3,6 +3,7 @@
 #include "config.h"
 #include "control.h"
 #include "foc.h"
+#include "position_memory.h"
 #include "usart.h"
 
 #include "hc32_ll.h"
@@ -153,6 +154,8 @@ void Encoder_Task(void)
         return;
     }
 
+    PositionMemory_UpdateMotorSingleTurn((int32_t)(((uint32_t)m_u16RawAngle14 * 36000UL) / 16384UL));
+
     now_mech_angle_rad = m_f32MechAngleRad;
 
     if (speed_init == 0U) {
@@ -203,7 +206,7 @@ void Encoder_StatusPrintTask(void)
     motor_control_debug_t control_debug;
     motor_foc_debug_t foc_debug;
 
-    char line[560];
+    char line[660];
     char raw14[8];
     char pos_x100[12];
     char vel_x10[12];
@@ -233,6 +236,9 @@ void Encoder_StatusPrintTask(void)
     char eia_ma[12];
     char eib_ma[12];
     char eic_ma[12];
+    char motor_total_x100[16];
+    char output_total_x100[16];
+    char flash_status[12];
     uint32_t idx = 0UL;
 
     if ((now_tick - last_print_tick) < APP_STATUS_PRINT_INTERVAL_TICKS) {
@@ -272,6 +278,9 @@ void Encoder_StatusPrintTask(void)
     (void)App_I32ToDecStr(eia_ma, (int32_t)(foc_debug.ia_ref_a * 1000.0f));
     (void)App_I32ToDecStr(eib_ma, (int32_t)(foc_debug.ib_ref_a * 1000.0f));
     (void)App_I32ToDecStr(eic_ma, (int32_t)(foc_debug.ic_ref_a * 1000.0f));
+    (void)App_I32ToDecStr(motor_total_x100, PositionMemory_GetMotorTotalDegX100());
+    (void)App_I32ToDecStr(output_total_x100, PositionMemory_GetOutputTotalDegX100());
+    (void)App_I32ToDecStr(flash_status, PositionMemory_GetLastFlashStatus());
 
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { line[idx++] = *p++; } } while (0)
     APPEND_STR("st=");
@@ -340,6 +349,14 @@ void Encoder_StatusPrintTask(void)
     APPEND_STR(eib_ma);
     APPEND_STR(", EicMA=");
     APPEND_STR(eic_ma);
+    APPEND_STR(", motorTotalX100=");
+    APPEND_STR(motor_total_x100);
+    APPEND_STR(", outputTotalX100=");
+    APPEND_STR(output_total_x100);
+    APPEND_STR(", posMem=");
+    APPEND_STR(PositionMemory_HasValidFlashRecord() != 0U ? "OK" : "NEW");
+    APPEND_STR(", flash=");
+    APPEND_STR(flash_status);
     APPEND_STR("\r\n");
     line[idx] = '\0';
 #undef APPEND_STR

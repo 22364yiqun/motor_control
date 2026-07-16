@@ -190,13 +190,9 @@ void App_USART1RxCommandTask(void)
 
                     if (App_ParseMitLine(parse_str, &pos_deg, &vel_deg_s, &tau_ff_mnm) != 0U) {
 #define APPEND_STR(s) do { const char *p = (s); while (*p != '\0') { ack[idx++] = *p++; } } while (0)
-                        int32_t pos_print = pos_deg % 360;
-                        if (pos_print < 0) {
-                            pos_print += 360;
-                        }
-                        Motor_ControlSetMitTarget(pos_deg, vel_deg_s, tau_ff_mnm);
-                        (void)App_I32ToDecStr(str_cmd, pos_print);
-                        APPEND_STR("CMD mit pos=");
+                        Motor_ControlSetOutputTargetDeg(pos_deg, vel_deg_s, tau_ff_mnm);
+                        (void)App_I32ToDecStr(str_cmd, pos_deg);
+                        APPEND_STR("CMD mit outPos=");
                         APPEND_STR(str_cmd);
                         (void)App_I32ToDecStr(str_cmd, vel_deg_s);
                         APPEND_STR(" deg vel=");
@@ -258,6 +254,7 @@ static int32_t App_USART1TxRingPop(char *ch)
 
 void App_USART1TxPumpInMainLoop(void)
 {
+    // 将串口1的发送缓冲区中的数据发送出去，最多发送APP_USART_TX_PUMP_BYTES个字节
     uint32_t sent = 0UL;
     char ch;
 

@@ -8,9 +8,10 @@ void IntCfg(void)
 {
     stc_irq_signin_config_t irq;
 
-    irq.enIntSrc = INT_SRC_USART1_RI;
-    irq.enIRQn = INT000_IRQn;
-    irq.pfnCallback = &USART1_RxIrqCallback;
+    // 串口的接收中断
+    irq.enIntSrc = INT_SRC_USART1_RI; // 串口1接收中断
+    irq.enIRQn = INT000_IRQn; // 串口1接收中断对应的中断号
+    irq.pfnCallback = &USART1_RxIrqCallback; // 串口1接收中断的回调函数
     (void)INTC_IrqSignIn(&irq);
     NVIC_ClearPendingIRQ(INT000_IRQn);
     NVIC_SetPriority(INT000_IRQn, DDL_IRQ_PRIO_13);

@@ -1,24 +1,4 @@
-﻿/**
- *******************************************************************************
- * @file  main.c
- * @brief Main program.
- @verbatim
-   Change Logs:
-   Date             Author          Notes
-   2026-05-31       CDT             First version
- @endverbatim
- *******************************************************************************
- * Copyright (C) 2022-2025, Xiaohua Semiconductor Co., Ltd. All rights reserved.
- *
- * This software component is licensed by XHSC under BSD 3-Clause license
- * (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                    opensource.org/licenses/BSD-3-Clause
- *
- *******************************************************************************
- */
-
-/*******************************************************************************
+﻿/*******************************************************************************
  * Include files
  ******************************************************************************/
 #include "main.h"
@@ -34,6 +14,7 @@
 #include "int.h"
 #include "dma.h"
 #include "encoder.h"
+#include "position_memory.h"
 #include <math.h>
 
 /**
@@ -65,19 +46,20 @@ int main(void)
     CanCfg();
     //SPI Config
     SpiCfg();
+    //Multi-turn position memory
+    PositionMemory_Init();
     /* Register write protected for some required peripherals. */
     LL_PERIPH_WP(LL_PERIPH_ALL);
 
     App_USART1SendString("CAN+UART MIT FOC start\r\n");
-    App_USART1SendString("UART: m90 or m90,0,0. CAN ID=0x201 DLC=8.\r\n");
+    App_USART1SendString("UART: m90 or m90,0,0 = output angle. CAN ID=0x201 DLC=8.\r\n");
 
     for (;;) {
         App_USART1TxPumpInMainLoop();
         App_USART1RxCommandTask();
         App_CANTask();
         Encoder_Task();
-        App_USART1RxCommandTask();
-        App_CANTask();
+        PositionMemory_Task();
         Encoder_StatusPrintTask();
         App_USART1TxPumpInMainLoop();
     }

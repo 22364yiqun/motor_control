@@ -48,6 +48,18 @@
 #define APP_SPEED_ACCEL_CLAMP_DEG_S2    (4000.0f)      /* 速度估算最大加速度，抑制速度打印和速度环毛刺。 */
 #define APP_SPEED_ACCEL_CLAMP_RAD_S2    (APP_SPEED_ACCEL_CLAMP_DEG_S2 * APP_TWO_PI / 360.0f)
 
+/* Multi-turn position memory.
+ * The motor-side single-turn encoder is accumulated into a multi-turn motor
+ * angle, then converted to output-side angle by OUTPUT = MOTOR * 7 / 57.
+ * Sector 31 is the last 8KB sector of the 256KB internal flash.
+ */
+#define APP_POSMEM_ENABLE               (DDL_ON)
+#define APP_POSMEM_FLASH_SECTOR         (31U)
+#define APP_POSMEM_SAVE_INTERVAL_TICKS  (40000UL)
+#define APP_POSMEM_SAVE_DELTA_X100      (100)
+#define APP_GEAR_RATIO_NUM              (57)
+#define APP_GEAR_RATIO_DEN              (7)
+
 /* MIT torque mode.
  * tau_out = Kp * pos_err + Kd * vel_err + tau_ff
  * tau_motor = tau_out / (gear_ratio * efficiency)
@@ -57,7 +69,7 @@
 #define APP_MIT_LOOP_DIV                (20U) // MIT环运行周期数，20次控制周期运行一次MIT环
 #define APP_MIT_KP_NM_PER_RAD           (0.006f)  // MIT环位置环比例系数
 #define APP_MIT_KD_NM_PER_RAD_S         (0.00020f) // MIT环速度环比例系数
-#define APP_MIT_GEAR_RATIO              (1.0f) // 减速比，电机转速/负载转速
+#define APP_MIT_GEAR_RATIO              ((float)APP_GEAR_RATIO_NUM / (float)APP_GEAR_RATIO_DEN) // 减速比，电机转速/负载转速
 #define APP_MIT_TRANSMISSION_EFF        (1.0f) // 传动效率，0~1
 #define APP_MIT_MOTOR_KT_NM_PER_A       (0.080f) // 电机力矩常数，单位Nm/A
 #define APP_MIT_VEL_TARGET_LIMIT_DEG_S  (300) // MIT环目标速度限幅，单位deg/s
@@ -109,10 +121,10 @@
 #define APP_ZERO_IQ_OFF_BAND_A          (0.001f)       /* Iq小于该值时认为指令已经回到零。 */
 
 /* 电流环PI */
-#define APP_ID_KP                       (0.035f)       /* d轴电流PI比例系数。 */
-#define APP_ID_KI                       (2.0f)         /* d轴电流PI积分系数。 */
-#define APP_IQ_KP                       (0.035f)       /* q轴电流PI比例系数。 */
-#define APP_IQ_KI                       (2.0f)         /* q轴电流PI积分系数。 */
+#define APP_ID_KP                       (1.0f)       /* d轴电流PI比例系数。0.035 */
+#define APP_ID_KI                       (0.0f)         /* d轴电流PI积分系数。2.0 */
+#define APP_IQ_KP                       (1.0f)       /* q轴电流PI比例系数。 */
+#define APP_IQ_KI                       (0.0f)         /* q轴电流PI积分系数。 */
 #define APP_CURRENT_PI_I_LIMIT          (0.050f)       /* 电流PI积分限幅。 */
 #define APP_CURRENT_V_LIMIT             (0.160f)       /* 单轴PI输出电压限幅。 */
 #define APP_CURRENT_V_VECTOR_LIMIT      (0.160f)       /* SVPWM前的dq电压矢量限幅。 */

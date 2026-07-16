@@ -31,9 +31,18 @@ typedef struct {
 
 void Motor_ControlInit(void);
 void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w);
+void Motor_ControlSetOutputTargetDeg(int32_t output_position_deg,
+                                     int32_t output_velocity_deg_s,
+                                     int32_t tau_ff_mnm);
+void Motor_ControlSetOutputTargetX100(int32_t output_position_x100,
+                                      int32_t output_velocity_x10,
+                                      int32_t tau_ff_mnm);
 void Motor_ControlSetMitTarget(int32_t position_target_deg,
                                int32_t velocity_target_deg_s,
                                int32_t tau_ff_mnm);
+void Motor_ControlSetMitTargetX100(int32_t position_target_x100,
+                                   int32_t velocity_target_x10,
+                                   int32_t tau_ff_mnm);
 void Motor_ControlEnterFault(void);
 void Motor_ControlSetElectricalAngle(float theta_e);
 uint8_t Motor_ControlIsEncoderZeroDone(void);

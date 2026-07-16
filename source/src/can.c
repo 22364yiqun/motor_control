@@ -6,10 +6,12 @@
 
 #include <stddef.h>
 
+// 打印参数
 static int32_t g_i32LastCanPrintPosDeg = 0;
 static int32_t g_i32LastCanPrintVelDegS = 0;
 static int32_t g_i32LastCanPrintTauMNm = 0;
 static uint8_t g_u8CanPrintValid = 0U;
+
 static uint8_t g_u8CanAckSeq = 0U;
 static uint8_t g_u8CanHeartbeatSeq = 0U;
 static uint32_t g_u32LastHeartbeatTick = 0UL;
@@ -35,6 +37,7 @@ static int32_t g_i32LastCanTxRet = 0;
 
 static int16_t App_CANReadI16Le(const uint8_t *data)
 {
+    // 读取小端16位整数，将两个字节合并为一个16位整数
     uint16_t value;
 
     value = (uint16_t)data[0];
@@ -45,6 +48,7 @@ static int16_t App_CANReadI16Le(const uint8_t *data)
 
 static int32_t App_CANRoundDivS32(int32_t value, int32_t div)
 {
+    // 对32位整数进行四舍五入除法，返回结果为整数
     if (value >= 0) {
         return (value + (div / 2)) / div;
     }
@@ -54,6 +58,7 @@ static int32_t App_CANRoundDivS32(int32_t value, int32_t div)
 
 static void App_CANWriteI16Le(uint8_t *data, int32_t value)
 {
+    // 将一个32位整数写入小端16位整数的字节数组中，只保留低16位
     const int16_t svalue = (int16_t)value;
     const uint16_t uvalue = (uint16_t)svalue;
 
@@ -63,6 +68,7 @@ static void App_CANWriteI16Le(uint8_t *data, int32_t value)
 
 static char *App_CANAppendStr(char *dst, const char *src)
 {
+    // 将源字符串追加到目标字符串的末尾，返回新的目标字符串指针
     while (*src != '\0') {
         *dst++ = *src++;
     }
@@ -72,6 +78,7 @@ static char *App_CANAppendStr(char *dst, const char *src)
 
 static char *App_CANAppendI32(char *dst, int32_t value)
 {
+    // 将32位整数转换为字符串并追加到目标字符串的末尾，返回新的目标字符串指针
     char tmp[12];
     uint32_t idx = 0U;
     uint32_t out_idx = 0U;
@@ -99,6 +106,7 @@ static char *App_CANAppendI32(char *dst, int32_t value)
 
 static void App_CANPrintMitCommand(int32_t pos_deg, int32_t vel_deg_s, int32_t tau_ff_mnm)
 {
+    // 打印MIT命令的参数，如果参数没有变化则不打印
     char line[96];
     char *p;
 
@@ -115,7 +123,7 @@ static void App_CANPrintMitCommand(int32_t pos_deg, int32_t vel_deg_s, int32_t t
     g_i32LastCanPrintTauMNm = tau_ff_mnm;
 
     p = line;
-    p = App_CANAppendStr(p, "CAN CMD pos=");
+    p = App_CANAppendStr(p, "CAN CMD outPos=");
     p = App_CANAppendI32(p, pos_deg);
     p = App_CANAppendStr(p, " deg vel=");
     p = App_CANAppendI32(p, vel_deg_s);
@@ -406,7 +414,7 @@ void App_CANTask(void)
             const int32_t pos_deg = App_CANRoundDivS32(pos_x100, 100);
             const int32_t vel_deg_s = App_CANRoundDivS32(vel_x10, 10);
 
-            Motor_ControlSetMitTarget(pos_deg, vel_deg_s, tau_ff_mnm);
+            Motor_ControlSetOutputTargetX100(pos_x100, vel_x10, tau_ff_mnm);
             App_CANSendMitAck(pos_x100, vel_x10, tau_ff_mnm);
             App_CANPrintMitCommand(pos_deg, vel_deg_s, tau_ff_mnm);
         }

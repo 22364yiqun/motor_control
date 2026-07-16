@@ -3,6 +3,7 @@
 #include "config.h"
 #include "encoder.h"
 #include "foc.h"
+#include "position_memory.h"
 
 #include <stddef.h>
 
@@ -37,11 +38,11 @@ static uint32_t m_u32OffsetCnt = 0UL;
 static volatile float m_f32IqRefA = 0.0f;
 static volatile uint8_t m_u8ControlMode = APP_CONTROL_MODE_MIT;
 static volatile int32_t m_i32PositionTargetDeg = 0;
-static volatile float m_f32PositionTargetRad = 0.0f;
-static volatile float m_f32PositionErrorRad = 0.0f;
-static volatile int32_t m_i32MitVelocityTargetDegS = 0;
-static volatile float m_f32MitVelocityTargetRadS = 0.0f;
-static volatile float m_f32MitVelocityErrorRadS = 0.0f;
+static volatile float m_f32PositionTargetRad = 0.0f; // 电机轴目标位置，单位rad
+static volatile float m_f32PositionErrorRad = 0.0f; // 电机轴位置误差，单位rad
+static volatile int32_t m_i32MitVelocityTargetDegS = 0; // 电机轴目标速度，单位deg/s
+static volatile float m_f32MitVelocityTargetRadS = 0.0f; // 电机轴目标速度，单位rad/s
+static volatile float m_f32MitVelocityErrorRadS = 0.0f; // 电机轴速度误差，单位rad/s
 static volatile float m_f32MitTauFfNm = 0.0f;
 static volatile float m_f32MitTauStaticNm = 0.0f;
 static volatile float m_f32MitTauOutRefNm = 0.0f;
@@ -61,17 +62,6 @@ static float Motor_ControlWrapTwoPi(float angle)
     return angle;
 }
 
-static float Motor_ControlWrapPi(float angle)
-{
-    while (angle >= (APP_TWO_PI * 0.5f)) {
-        angle -= APP_TWO_PI;
-    }
-    while (angle < -(APP_TWO_PI * 0.5f)) {
-        angle += APP_TWO_PI;
-    }
-    return angle;
-}
-
 static float Motor_ControlClamp(float val, float min, float max)
 {
     if (val < min) {
@@ -83,8 +73,32 @@ static float Motor_ControlClamp(float val, float min, float max)
     return val;
 }
 
+static int32_t Motor_ControlRoundDivS64(int64_t value, int32_t div)
+{
+    // 避免除法时的截断误差，进行四舍五入。
+    if (value >= 0) {
+        return (int32_t)((value + ((int64_t)div / 2)) / (int64_t)div);
+    }
+
+    return (int32_t)((value - ((int64_t)div / 2)) / (int64_t)div);
+}
+
+static int32_t Motor_ControlOutputX100ToMotorX100(int32_t output_x100)
+{
+    // 减速器输出轴角度 -> 电机轴角度，考虑减速比。
+    return Motor_ControlRoundDivS64((int64_t)output_x100 * (int64_t)APP_GEAR_RATIO_NUM,
+                                    APP_GEAR_RATIO_DEN);
+}
+
+static int32_t Motor_ControlOutputVelX10ToMotorVel(int32_t output_x10)
+{
+    return Motor_ControlRoundDivS64((int64_t)output_x10 * (int64_t)APP_GEAR_RATIO_NUM,
+                                    APP_GEAR_RATIO_DEN * 10);
+}
+
 static void Motor_ControlUpdatePhaseCurrentFeedback(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
 {
+    // 将ADC原始采样值转换为三相电流，单位A，并保存到全局变量中。
     const int32_t cnt_u = (int32_t)raw_u - (int32_t)m_u16AdcOffsetU;
     const int32_t cnt_v = (int32_t)raw_v - (int32_t)m_u16AdcOffsetV;
     const int32_t cnt_w = (int32_t)raw_w - (int32_t)m_u16AdcOffsetW;
@@ -93,6 +107,10 @@ static void Motor_ControlUpdatePhaseCurrentFeedback(uint16_t raw_u, uint16_t raw
     m_i32IbCnt = cnt_v;
     m_i32IcCnt = cnt_w;
 
+    // 如果你的电路布局（采样电阻的位置）在物理接线上，
+    // 使得当电流真正流向电机时，采样电阻上的电压降被运放放大后，
+    // 反而产生了一个减小的信号（相对于偏置电压），那么此时你读到的数值方向就是“反”的。
+    // 为了让算法逻辑正确，你必须乘以 -1 来翻转符号。 
     m_f32IaA = APP_CURRENT_A_SIGN * (float)m_i32IaCnt * APP_CURRENT_A_PER_COUNT;
     m_f32IbA = APP_CURRENT_B_SIGN * (float)m_i32IbCnt * APP_CURRENT_A_PER_COUNT;
     m_f32IcA = APP_CURRENT_C_SIGN * (float)m_i32IcCnt * APP_CURRENT_A_PER_COUNT;
@@ -100,6 +118,7 @@ static void Motor_ControlUpdatePhaseCurrentFeedback(uint16_t raw_u, uint16_t raw
 
 static uint8_t Motor_ControlIsAdcOverCurrentNow(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
 {
+    // 检查当前ADC采样值是否超过快速过流保护阈值，返回1表示过流，0表示正常。
     const int32_t cnt_u = (int32_t)raw_u - (int32_t)m_u16AdcOffsetU;
     const int32_t cnt_v = (int32_t)raw_v - (int32_t)m_u16AdcOffsetV;
     const int32_t cnt_w = (int32_t)raw_w - (int32_t)m_u16AdcOffsetW;
@@ -119,6 +138,7 @@ static uint8_t Motor_ControlIsAdcOverCurrentNow(uint16_t raw_u, uint16_t raw_v, 
 
 static uint8_t Motor_ControlIsCurrentTooHigh(void)
 {
+    // 检查当前三相电流是否超过绝对值或总和的过流保护阈值，返回1表示过流，0表示正常。
     const float sum = m_f32IaA + m_f32IbA + m_f32IcA;
 
     if (m_u8OffsetDone == 0U) {
@@ -147,20 +167,23 @@ static uint8_t Motor_ControlIsCurrentTooHigh(void)
 /* MIT外环：位置/速度PD生成输出端力矩，再通过减速比、效率和Kt换算成Iq。 */
 static float Motor_ControlMitLoopStep(void)
 {
-    const float measured_pos_rad = Encoder_GetMechAngleRad();
-    const float measured_vel_rad_s = Encoder_GetMechSpeedRadS();
-    const float torque_den = APP_MIT_GEAR_RATIO * APP_MIT_TRANSMISSION_EFF;
-    float pos_err_rad = Motor_ControlWrapPi(m_f32PositionTargetRad - measured_pos_rad);
-    float vel_err_rad_s = m_f32MitVelocityTargetRadS - measured_vel_rad_s;
-    float abs_pos_err_rad = pos_err_rad;
-    float tau_static_nm = 0.0f;
-    float tau_out_nm;
-    float tau_motor_nm;
-    float iq_ref_a;
+    const float measured_pos_rad = ((float)PositionMemory_GetMotorTotalDegX100()) *
+                                   APP_TWO_PI / 36000.0f; // 获取电机原始位置
+    const float measured_vel_rad_s = Encoder_GetMechSpeedRadS(); // 计算编码器速度
+    const float torque_den = APP_MIT_GEAR_RATIO * APP_MIT_TRANSMISSION_EFF; // 力矩传递系数，需要修改*****************
+
+    float pos_err_rad = m_f32PositionTargetRad - measured_pos_rad; // 位置误差
+    float vel_err_rad_s = m_f32MitVelocityTargetRadS - measured_vel_rad_s; // 速度误差
+
+    float abs_pos_err_rad = pos_err_rad;  // 绝对值位置误差，用于判断是否进入完成状态
+    float tau_static_nm = 0.0f; // 静摩擦力矩补偿，单位Nm
+    float tau_out_nm; // 输出端力矩，单位Nm
+    float tau_motor_nm; // 电机端力矩，单位Nm
+    float iq_ref_a; // 电机Iq参考值，单位A
 
     if (m_u8MitTargetValid == 0U) {
         m_f32PositionTargetRad = measured_pos_rad;
-        m_i32PositionTargetDeg = (int32_t)(measured_pos_rad * 57.2957795f);
+        m_i32PositionTargetDeg = PositionMemory_GetOutputTotalDegX100() / 100;
         m_f32PositionErrorRad = 0.0f;
         m_f32MitVelocityErrorRadS = 0.0f;
         m_f32MitTauStaticNm = 0.0f;
@@ -196,11 +219,12 @@ static float Motor_ControlMitLoopStep(void)
         vel_err_rad_s = Motor_ControlClamp(vel_err_rad_s,
                                            -APP_MIT_VEL_ERR_CLAMP_RAD_S,
                                             APP_MIT_VEL_ERR_CLAMP_RAD_S);
+                                            
         if (pos_err_rad > APP_MIT_STATIC_FRICTION_BAND_RAD) {
             tau_static_nm = APP_MIT_STATIC_FRICTION_NM;
         } else if (pos_err_rad < -APP_MIT_STATIC_FRICTION_BAND_RAD) {
             tau_static_nm = -APP_MIT_STATIC_FRICTION_NM;
-        }
+        }// 静摩擦补偿
 
         tau_out_nm = (APP_MIT_KP_NM_PER_RAD * pos_err_rad) +
                      (APP_MIT_KD_NM_PER_RAD_S * vel_err_rad_s) +
@@ -391,22 +415,27 @@ void Motor_ControlFastLoop(uint16_t raw_u, uint16_t raw_v, uint16_t raw_w)
     }
 }
 
-/* 串口MIT入口：设置单圈绝对位置、目标速度和输出端前馈力矩。 */
-void Motor_ControlSetMitTarget(int32_t position_target_deg,
-                               int32_t velocity_target_deg_s,
-                               int32_t tau_ff_mnm)
+void Motor_ControlSetOutputTargetDeg(int32_t output_position_deg,
+                                     int32_t output_velocity_deg_s,
+                                     int32_t tau_ff_mnm)
 {
-    int32_t pos_deg = position_target_deg % 360;
+    Motor_ControlSetOutputTargetX100(output_position_deg * 100,
+                                     output_velocity_deg_s * 10,
+                                     tau_ff_mnm);
+}
+
+void Motor_ControlSetOutputTargetX100(int32_t output_position_x100,
+                                      int32_t output_velocity_x10,
+                                      int32_t tau_ff_mnm)
+{
+    const int32_t motor_target_x100 = Motor_ControlOutputX100ToMotorX100(output_position_x100);
+    int32_t motor_velocity_deg_s = Motor_ControlOutputVelX10ToMotorVel(output_velocity_x10);
     float tau_ff_nm = ((float)tau_ff_mnm) * 0.001f;
 
-    if (pos_deg < 0) {
-        pos_deg += 360;
-    }
-
-    if (velocity_target_deg_s > APP_MIT_VEL_TARGET_LIMIT_DEG_S) {
-        velocity_target_deg_s = APP_MIT_VEL_TARGET_LIMIT_DEG_S;
-    } else if (velocity_target_deg_s < -APP_MIT_VEL_TARGET_LIMIT_DEG_S) {
-        velocity_target_deg_s = -APP_MIT_VEL_TARGET_LIMIT_DEG_S;
+    if (motor_velocity_deg_s > APP_MIT_VEL_TARGET_LIMIT_DEG_S) {
+        motor_velocity_deg_s = APP_MIT_VEL_TARGET_LIMIT_DEG_S;
+    } else if (motor_velocity_deg_s < -APP_MIT_VEL_TARGET_LIMIT_DEG_S) {
+        motor_velocity_deg_s = -APP_MIT_VEL_TARGET_LIMIT_DEG_S;
     }
 
     tau_ff_nm = Motor_ControlClamp(tau_ff_nm,
@@ -414,10 +443,10 @@ void Motor_ControlSetMitTarget(int32_t position_target_deg,
                                     APP_MIT_TAU_OUT_LIMIT_NM);
 
     m_u8ControlMode = APP_CONTROL_MODE_MIT;
-    m_i32PositionTargetDeg = pos_deg;
-    m_f32PositionTargetRad = ((float)pos_deg) * APP_TWO_PI / 360.0f;
-    m_i32MitVelocityTargetDegS = velocity_target_deg_s;
-    m_f32MitVelocityTargetRadS = ((float)velocity_target_deg_s) * APP_TWO_PI / 360.0f;
+    m_i32PositionTargetDeg = Motor_ControlRoundDivS64(output_position_x100, 100);
+    m_f32PositionTargetRad = ((float)motor_target_x100) * APP_TWO_PI / 36000.0f;
+    m_i32MitVelocityTargetDegS = motor_velocity_deg_s;
+    m_f32MitVelocityTargetRadS = ((float)motor_velocity_deg_s) * APP_TWO_PI / 360.0f;
     m_f32MitTauFfNm = tau_ff_nm;
     m_f32IqRefA = 0.0f;
     m_f32MitTauOutRefNm = 0.0f;
@@ -426,6 +455,24 @@ void Motor_ControlSetMitTarget(int32_t position_target_deg,
     m_u8MitDone = 0U;
     m_u16MitLoopDiv = 0U;
     Motor_FOC_Reset();
+}
+
+void Motor_ControlSetMitTarget(int32_t position_target_deg,
+                               int32_t velocity_target_deg_s,
+                               int32_t tau_ff_mnm)
+{
+    Motor_ControlSetOutputTargetDeg(position_target_deg,
+                                    velocity_target_deg_s,
+                                    tau_ff_mnm);
+}
+
+void Motor_ControlSetMitTargetX100(int32_t position_target_x100,
+                                   int32_t velocity_target_x10,
+                                   int32_t tau_ff_mnm)
+{
+    Motor_ControlSetOutputTargetX100(position_target_x100,
+                                     velocity_target_x10,
+                                     tau_ff_mnm);
 }
 
 void Motor_ControlEnterFault(void)
