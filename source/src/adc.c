@@ -70,9 +70,9 @@ void ADC1_Handler(void)
 
         ADC_ClearStatus(CM_ADC1, ADC_FLAG_EOCA);
 
-        m_u16AdcCh0 = ADC_GetValue(CM_ADC1, ADC_CH0);
-        m_u16AdcCh4 = ADC_GetValue(CM_ADC1, ADC_CH4);
-        m_u16AdcCh6 = ADC_GetValue(CM_ADC1, ADC_CH6);
+        m_u16AdcCh0 = ADC_GetValue(CM_ADC1, ADC_CH0); // u
+        m_u16AdcCh4 = ADC_GetValue(CM_ADC1, ADC_CH4); // v
+        m_u16AdcCh6 = ADC_GetValue(CM_ADC1, ADC_CH6); // w
         m_u8AdcReady = 1U;
 
         Motor_ControlFastLoop(m_u16AdcCh6, m_u16AdcCh4, m_u16AdcCh0);
