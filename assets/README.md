@@ -1,6 +1,6 @@
 # Project Media
 
-All photographs, CAD renderings, overview graphics, and demonstration videos are collected here so that media assets do not become scattered across documentation directories.
+All photographs, CAD renderings, overview graphics, and demonstration videos are collected here so that static project assets do not become scattered across documentation or experiment directories.
 
 ## Images
 
@@ -32,7 +32,7 @@ Additional CAD exports:
 | Torque command | [Watch video](videos/torque-command-5-ncm.mp4) | Demonstration with a 5 N·cm torque target |
 | Fault protection | [Watch video](videos/fault-protection-demo.mp4) | Demonstration of the current protection behavior |
 
-The filenames record the commanded setpoints shown by the supplied demonstrations. They are not a substitute for calibrated measurements. Future quantitative results will be published under [`../experiments/`](../experiments/) with test conditions and raw data.
+The filenames record the commanded setpoints shown by the supplied demonstrations. They are not a substitute for calibrated measurements. Future quantitative results will be published under [`../results/experiments/`](../results/experiments/) with test conditions and raw data.
 
 ## Contribution Rules
 

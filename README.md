@@ -2,7 +2,7 @@
 
 Open-source integrated-joint hardware and field-oriented motor control for embodied AI.
 
-![OpenEAI-FOC overview](results/media/images/openeai-foc-overview.png)
+![OpenEAI-FOC overview](assets/images/openeai-foc-overview.png)
 
 OpenEAI-FOC combines a compact motor and reducer, custom drive electronics, dual-encoder-ready sensing, HC32F448 firmware, and host-side control tools. The current firmware implements three-phase BLDC/PMSM field-oriented control (FOC), MA732 magnetic-encoder sampling, MIT-style position/velocity/feed-forward torque control, CAN and UART command interfaces, and flash-backed multi-turn output-position tracking.
 
@@ -43,7 +43,7 @@ Safety-critical limits and protection must remain enforceable at the actuator le
 | CAN and UART protocols | Documented | [`docs/protocol/`](docs/protocol/) |
 | Mechanical STEP models | Published | [`hardware/mechanical/`](hardware/mechanical/) |
 | Preliminary motor BOM | Published and explained | [`hardware/bom/`](hardware/bom/) |
-| Images and control demonstrations | Published | [`results/media/`](results/media/) |
+| Images and control demonstrations | Published | [`assets/`](assets/) |
 | Schematics, PCB, and fabrication files | Planned release | [`hardware/electronics/`](hardware/electronics/) |
 | Second-encoder electronics | Planned release | [`hardware/electronics/encoder-2/`](hardware/electronics/encoder-2/) |
 | Reproducible Keil project | Reserved; not yet published | [`firmware/projects/keil/`](firmware/projects/keil/) |
@@ -54,7 +54,7 @@ The repository is currently a source snapshot. It does not yet contain the compl
 
 ## Current Results
 
-The overview image at the top of this page shows the assembled physical prototype, the integrated-joint CAD and exploded assembly, the custom circular drive board, and the second-encoder board. Additional prototype photographs, exploded views, and short control demonstrations are available in [`results/media/`](results/media/). The following status distinguishes working demonstrations from measurements that still need to be published.
+The overview image at the top of this page shows the assembled physical prototype, the integrated-joint CAD and exploded assembly, the custom circular drive board, and the second-encoder board. Additional prototype photographs, exploded views, and short control demonstrations are available in [`assets/`](assets/). The following status distinguishes working demonstrations from measurements that still need to be published.
 
 | Capability or evidence | Current status |
 | --- | --- |
@@ -172,9 +172,10 @@ OpenEAI-FOC/
 │  └─ bom/                    # BOM source and explanation
 ├─ docs/                       # Human-readable control, protocol, assembly, setup, and tuning guides
 ├─ tools/                      # Programs, debugger support files, and CAN/UART utilities
+├─ assets/
+│  ├─ images/                 # Overview, photographs, and CAD renderings
+│  └─ videos/                 # Control and protection demonstrations
 ├─ results/
-│  ├─ media/images/           # Central image collection
-│  ├─ media/videos/           # Control and protection demonstrations
 │  └─ experiments/            # Reproducible measurements and datasets
 ├─ can_trans.py                # Damiao USB-CAN command-line utility
 ├─ can_code_control_test.py    # Position-sequence test

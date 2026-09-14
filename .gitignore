@@ -10,6 +10,8 @@
 !source/
 !source/**
 !*.py
+!assets/
+!assets/**
 !docs/
 !docs/**
 !hardware/
