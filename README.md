@@ -2,7 +2,7 @@
 
 Open-source integrated-joint hardware and field-oriented motor control for embodied AI.
 
-![OpenEAI-FOC overview](results/openeai-foc-overview.png)
+![OpenEAI-FOC overview](results/media/images/openeai-foc-overview.png)
 
 OpenEAI-FOC combines a compact motor and reducer, custom drive electronics, dual-encoder-ready sensing, HC32F448 firmware, and host-side control tools. The current firmware implements three-phase BLDC/PMSM field-oriented control (FOC), MA732 magnetic-encoder sampling, MIT-style position/velocity/feed-forward torque control, CAN and UART command interfaces, and flash-backed multi-turn output-position tracking.
 
@@ -43,18 +43,18 @@ Safety-critical limits and protection must remain enforceable at the actuator le
 | CAN and UART protocols | Documented | [`docs/protocol/`](docs/protocol/) |
 | Mechanical STEP models | Published | [`hardware/mechanical/`](hardware/mechanical/) |
 | Preliminary motor BOM | Published and explained | [`hardware/bom/`](hardware/bom/) |
-| CAD renders | Published | [`results/renderings/`](results/renderings/) |
+| Images and control demonstrations | Published | [`results/media/`](results/media/) |
 | Schematics, PCB, and fabrication files | Planned release | [`hardware/electronics/`](hardware/electronics/) |
 | Second-encoder electronics | Planned release | [`hardware/electronics/encoder-2/`](hardware/electronics/encoder-2/) |
 | Reproducible Keil project | Reserved; not yet published | [`firmware/projects/keil/`](firmware/projects/keil/) |
 | Assembly, commissioning, and tuning data | In progress | [`docs/assembly/`](docs/assembly/), [`docs/tuning/`](docs/tuning/) |
-| Quantitative experiment data | Planned | [`results/experiments/`](results/experiments/) |
+| Quantitative experiment data | Initial demonstrations published; instrumented datasets planned | [`results/`](results/) |
 
 The repository is currently a source snapshot. It does not yet contain the complete Keil project, startup files, linker configuration, or HC32 Device Driver Library (DDL), and therefore cannot yet be built standalone.
 
 ## Current Results
 
-The overview image at the top of this page shows the assembled physical prototype, the integrated-joint CAD and exploded assembly, the custom circular drive board, and the second-encoder board. The following status distinguishes working implementation from measurements that still need to be published.
+The overview image at the top of this page shows the assembled physical prototype, the integrated-joint CAD and exploded assembly, the custom circular drive board, and the second-encoder board. Additional prototype photographs, exploded views, and short control demonstrations are available in [`results/media/`](results/media/). The following status distinguishes working demonstrations from measurements that still need to be published.
 
 | Capability or evidence | Current status |
 | --- | --- |
@@ -65,6 +65,10 @@ The overview image at the top of this page shows the assembled physical prototyp
 | Flash-backed reducer-output multi-turn tracking | Implemented; limitations noted in the FAQ |
 | OpenEAI-VLA-to-CAN integration example | Published |
 | Drive PCB and second-encoder board | Shown in the project overview; design files pending |
+| MIT mode and position-command demonstrations | Published as videos |
+| Velocity command at 1.2 rad/s | Published as a demonstration video |
+| Torque command at 5 N·cm | Published as a demonstration video; calibrated measurement data pending |
+| Fault-protection behavior | Published as a demonstration video; formal fault matrix pending |
 | Position-tracking accuracy and bandwidth | Quantitative dataset pending |
 | Calibrated output torque and force-control performance | Pending |
 | Thermal, efficiency, backlash, and load testing | Pending |
@@ -166,9 +170,12 @@ OpenEAI-FOC/
 │  ├─ electronics/            # Drive PCB and second-encoder release structure
 │  ├─ mechanical/             # STEP models and mechanical documentation
 │  └─ bom/                    # BOM source and explanation
-├─ docs/                       # Control, protocol, assembly, setup, and tuning
-├─ tools/                      # Programming, UART, and CAN tooling notes
-├─ results/                    # Overview, renders, photos, and experiments
+├─ docs/                       # Human-readable control, protocol, assembly, setup, and tuning guides
+├─ tools/                      # Programs, debugger support files, and CAN/UART utilities
+├─ results/
+│  ├─ media/images/           # Central image collection
+│  ├─ media/videos/           # Control and protection demonstrations
+│  └─ experiments/            # Reproducible measurements and datasets
 ├─ can_trans.py                # Damiao USB-CAN command-line utility
 ├─ can_code_control_test.py    # Position-sequence test
 └─ vla_can_control_example.py  # Example VLA-to-CAN integration
@@ -233,7 +240,7 @@ Immediately remove power if the motor kicks, turns in the wrong direction, oscil
 - [x] Publish the application firmware source
 - [x] Publish CAN/UART protocol notes and Python control examples
 - [x] Publish the current mechanical STEP package and preliminary BOM
-- [x] Add the system overview, CAD renders, and prototype imagery
+- [x] Add the system overview, CAD renders, prototype imagery, and initial control videos
 - [ ] Publish a tested, directly buildable Keil project with pinned HC32 dependencies
 - [ ] Release drive-board schematics, PCB source, Gerbers, and manufacturing outputs
 - [ ] Release the second-encoder schematic, PCB, calibration procedure, and firmware interface

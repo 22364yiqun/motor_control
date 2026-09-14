@@ -9,4 +9,4 @@
 | [Assembly guide](assembly/README.md) | Mechanical/electrical assembly and checklists | To be completed |
 | [Calibration and tuning](tuning/README.md) | Power-up, encoder, current loop, and MIT parameters | Initial outline |
 
-Store photographs, waveforms, test data, and version-specific attachments in an `assets/` directory next to the relevant document, and reference them with relative links.
+The `docs/` tree contains human-readable engineering documentation. It is intentionally separate from `tools/`, which contains executable utilities, debugger support files, and tool-specific setup material. Store project photographs, renderings, and videos centrally in [`results/media/`](../results/media/); store raw logs, measurement tables, and reproducible experiment outputs in [`results/experiments/`](../results/experiments/).
