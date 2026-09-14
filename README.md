@@ -17,8 +17,9 @@ This repository is being organized into a complete open-source release covering 
 | CAN and UART protocols | Documented | [`docs/protocol/`](docs/protocol/) |
 | Schematics and PCB | To be released | [`hardware/electronics/`](hardware/electronics/) |
 | Second-encoder design | To be released | [`hardware/electronics/encoder-2/`](hardware/electronics/encoder-2/) |
-| Mechanical design | To be released | [`hardware/mechanical/`](hardware/mechanical/) |
-| Bill of materials | To be released | [`hardware/bom/`](hardware/bom/) |
+| Mechanical STEP models | Published; manufacturing details in progress | [`hardware/mechanical/`](hardware/mechanical/) |
+| Preliminary mechanical BOM | Published | [`hardware/bom/`](hardware/bom/) |
+| CAD renders and test evidence | Renders published; prototype tests pending | [`results/`](results/) |
 | Assembly and tuning | Structure available; content in progress | [`docs/assembly/`](docs/assembly/), [`docs/tuning/`](docs/tuning/) |
 
 The current repository is a source snapshot. It does not yet include a complete IDE project, device startup code, linker script, or the HC32 Device Driver Library (DDL), so it cannot be built as a standalone project until those dependencies are added.
@@ -67,6 +68,8 @@ motor_control/
 ├─ tools/                      # Host-tool documentation and future tools
 ├─ docs/                       # Control, protocol, assembly, and tuning docs
 ├─ hardware/                   # Electronics, second encoder, mechanics, and BOM
+├─ results/                    # CAD renders, prototype photos, and experiments
+├─ firmware/projects/keil/     # Reserved for the reproducible Keil project
 ├─ can_trans.py               # Damiao USB-CAN command-line utility
 ├─ can_code_control_test.py   # Position-sequence test
 └─ vla_can_control_example.py # Example VLA-to-CAN integration
@@ -80,7 +83,7 @@ For the complete hardware/software checklist, debugger choices, XHSC packages, a
 
 ### 1. Prepare the Firmware Project
 
-The repository currently contains application source only. Start with the official `HC32F448_DDL_Rev1.3.0`, `HC32F448_Template_Rev1.1.0`, and `HC32F448_IDE_Rev1.1.0` packages from the [HC32F448 product page](https://www.xhsc.com.cn/product/1213.html). Add `source/inc/`, `source/src/*.c`, and `source/motor/*.c` together with the correct startup code, linker script, CMSIS files, HC32 DDL, and math-library support. A complete project, pinout, and flashing procedure will be added with the hardware release.
+The repository currently contains application source only. The empty [`firmware/projects/keil/`](firmware/projects/keil/) directory is reserved for a tested, directly buildable Keil project. Start with the official `HC32F448_DDL_Rev1.3.0`, `HC32F448_Template_Rev1.1.0`, and `HC32F448_IDE_Rev1.1.0` packages from the [HC32F448 product page](https://www.xhsc.com.cn/product/1213.html). Add `source/inc/`, `source/src/*.c`, and `source/motor/*.c` together with the correct startup code, linker script, CMSIS files, HC32 DDL, and math-library support.
 
 ### 2. Review the Configuration
 

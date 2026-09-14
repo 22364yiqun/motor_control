@@ -3,6 +3,7 @@
 *
 
 !.gitignore
+!.gitattributes
 !README.md
 !CONTRIBUTING.md
 !requirements.txt
@@ -15,3 +16,7 @@
 !hardware/**
 !tools/
 !tools/**
+!results/
+!results/**
+!firmware/
+!firmware/**
