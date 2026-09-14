@@ -2,6 +2,7 @@
 
 | Document | Contents | Status |
 | --- | --- | --- |
+| [Development setup](development-setup.md) | Required hardware, vendor packages, IDE, flashing, and repository policy | Available |
 | [MIT control](control/mit-control.md) | Control chain, equations, limits, and test procedure | Available |
 | [CAN protocol](protocol/can.md) | Commands, ACK, heartbeat, and units | Available |
 | [UART protocol](protocol/uart.md) | Text-command format and examples | Available |

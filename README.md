@@ -76,9 +76,11 @@ See [`docs/README.md`](docs/README.md) for the documentation index.
 
 ## Quick Start
 
+For the complete hardware/software checklist, debugger choices, XHSC packages, and dependency-distribution policy, read [`docs/development-setup.md`](docs/development-setup.md).
+
 ### 1. Prepare the Firmware Project
 
-The repository currently contains application source only. Add `source/inc/`, `source/src/*.c`, and `source/motor/*.c` to an HC32F4 project together with the correct startup code, linker script, CMSIS files, HC32 DDL, and math-library support. The current BSP macro is `BSP_EV_HC32F448_LQFP80`. A complete project, pinout, and flashing procedure will be added with the hardware release.
+The repository currently contains application source only. Start with the official `HC32F448_DDL_Rev1.3.0`, `HC32F448_Template_Rev1.1.0`, and `HC32F448_IDE_Rev1.1.0` packages from the [HC32F448 product page](https://www.xhsc.com.cn/product/1213.html). Add `source/inc/`, `source/src/*.c`, and `source/motor/*.c` together with the correct startup code, linker script, CMSIS files, HC32 DDL, and math-library support. A complete project, pinout, and flashing procedure will be added with the hardware release.
 
 ### 2. Review the Configuration
 
