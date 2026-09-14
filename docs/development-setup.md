@@ -66,9 +66,89 @@ XH-Link is the vendor-supported debug path and is the safest baseline for a repr
 
 ### J-Link alternative
 
-A genuine SEGGER J-Link can be used as an SWD probe when the selected IDE/device pack supplies working HC32F448 device and flash-algorithm support. However, SEGGER's public supported-device list does not currently identify HC32F448 explicitly. Do not promise plug-and-play standalone J-Link flashing until the exact probe model, J-Link software version, IDE, device selection, flash algorithm, and board revision have been tested together.
+A genuine SEGGER J-Link can be used over SWD, but HC32F448 must be added to the J-Link device database when it is absent from the installed SEGGER device list. The missing piece is not a special USB driver from XHSC; it is the HC32F448 CMSIS Flash Algorithm (`.FLM`) plus a J-Link XML device description.
 
-For this reason, the project should document J-Link as a **tested alternative**, not as the only guaranteed programmer. After validation, record the working configuration and a short flash/debug procedure here.
+The instructions below follow SEGGER's current [J-Link Device Support Kit](https://kb.segger.com/DSK) mechanism. SEGGER recommends a user-level `JLinkDevices` directory instead of modifying the J-Link installation directory, so the custom device definition survives J-Link upgrades.
+
+#### 1. Install the required packages
+
+Install the current [SEGGER J-Link Software and Documentation Pack](https://www.segger.com/downloads/jlink/) and the HDSC HC32F448 CMSIS Pack/IDE support. The official HDSC Pack repository contains [`HDSC.HC32F448.1.0.1.pack`](https://github.com/hdscmcu/pack) and the device-specific `.FLM` files.
+
+A CMSIS `.pack` file is a ZIP archive. Open or extract it and locate:
+
+```text
+FlashARM/HC32F448_128K.FLM
+FlashARM/HC32F448_256K.FLM
+```
+
+Select the file by the **full MCU part number**, not merely by package size:
+
+| MCU code-flash size | Flash loader | Maximum size |
+| --- | --- | ---: |
+| 128 KiB variant | `HC32F448_128K.FLM` | `0x20000` |
+| 256 KiB variant | `HC32F448_256K.FLM` | `0x40000` |
+
+The current firmware reserves sector 31 of a 256 KiB device, so it appears to expect a 256 KiB HC32F448 variant. Confirm the exact ordering code from the PCB schematic or chip marking before installing the loader.
+
+#### 2. Create the user device directory
+
+For J-Link software V7.62 or later, create a directory such as:
+
+```text
+Windows: %APPDATA%\SEGGER\JLinkDevices\XHSC\HC32F448\
+Linux:   ~/.config/SEGGER/JLinkDevices/XHSC/HC32F448/
+```
+
+Copy the selected `.FLM` file into that directory. Do not copy it into `Program Files/SEGGER`; files in the installation directory may be removed by an update.
+
+#### 3. Add `JLinkDevices.xml`
+
+For a 256 KiB part, create this file next to `HC32F448_256K.FLM`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Database>
+  <Device>
+    <ChipInfo Vendor="XHSC"
+              Name="HC32F448_CUSTOM_256K"
+              Core="JLINK_CORE_CORTEX_M4"
+              WorkRAMAddr="0x1FFF8000"
+              WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash"
+                   BaseAddr="0x00000000"
+                   AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K"
+                  Loader="HC32F448_256K.FLM"
+                  LoaderType="FLASH_ALGO_TYPE_OPEN"
+                  MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+</Database>
+```
+
+For a 128 KiB device, change the custom device name, loader name, loader filename, and `MaxSize` to `0x00020000`. The flash base address remains `0x00000000`. The work-RAM address and size above come from HDSC's official HC32F448 CMSIS Pack description.
+
+The deliberately distinct `HC32F448_CUSTOM_256K` name avoids accidentally overriding a future SEGGER-provided definition. If the IDE requires the exact HDSC part number, use the confirmed ordering code as the XML `Name` and select that same name in the debugger configuration.
+
+#### 4. Restart and verify J-Link
+
+Close all applications using the J-Link DLL, then reopen J-Link Commander, J-Flash, or the IDE. Select `HC32F448_CUSTOM_256K`, `SWD`, and a conservative initial SWD speed such as 1 MHz.
+
+In J-Link Commander, verify connection and memory access before erasing anything:
+
+```text
+JLinkExe -device HC32F448_CUSTOM_256K -if SWD -speed 1000
+```
+
+Then issue `connect`, `reset`, and a read-only memory display command. Only after a stable connection should you test erase/program/verify using a known image. Do not program the OTP loader (`HC32F448_otp.FLM`) during ordinary firmware development.
+
+If the custom name does not appear, check that the file is named exactly `JLinkDevices.xml`, that it and the `.FLM` share the documented directory, and that a current J-Link DLL is actually being used by the IDE. SEGGER documents the supported XML search locations in [Using Flashloader with different IDEs](https://kb.segger.com/Using_Flashloader_with_different_IDEs).
+
+#### 5. Configure the IDE
+
+In Keil, install the HDSC HC32F448 CMSIS Pack, select the exact HC32F448 device, choose J-Link/J-TRACE Cortex as the debug adapter, use SWD, and confirm that the matching `HC32F448_128K.FLM` or `HC32F448_256K.FLM` algorithm is selected under the Flash Download settings. The CMSIS Pack is also listed in Arm's [HC32F448 device catalog](https://www.keil.arm.com/family/hdsc-hc32f448-series/).
+
+Record the J-Link probe model, J-Link software/DLL version, IDE version, exact MCU ordering code, XML device name, `.FLM` checksum, SWD speed, and board revision after the procedure is validated on hardware. Until that test is completed, J-Link remains a documented integration path rather than the project's guaranteed baseline programmer.
 
 ### XHSC programming utilities
 
