@@ -77,6 +77,8 @@ motor_control/
 
 See [`docs/README.md`](docs/README.md) for the documentation index.
 
+Small, redistributable HC32F448 J-Link Flash Algorithms are included under [`tools/programming/`](tools/programming/). UART and CAN tool settings and vendor download links are documented under [`tools/uart/`](tools/uart/) and [`tools/can/`](tools/can/); third-party proprietary executables are not mirrored.
+
 ## Quick Start
 
 For the complete hardware/software checklist, debugger choices, XHSC packages, and dependency-distribution policy, read [`docs/development-setup.md`](docs/development-setup.md).

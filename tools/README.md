@@ -1,5 +1,11 @@
 # Host Tools
 
+## Included Support Files
+
+- [`programming/jlink/hc32f448/`](programming/jlink/hc32f448/): HC32F448 J-Link device XML and 128/256 KiB Flash Algorithms.
+- [`uart/`](uart/): ATK-XCOM-compatible UART settings and download policy.
+- [`can/`](can/): CAN adapter setup, vendor-tool links, and the supported project workflow.
+
 The current Python utilities remain in the repository root to preserve existing invocation paths:
 
 - `can_trans.py`: sends MIT commands through a Damiao USB-CAN adapter, waits for ACKs, and listens for frames;

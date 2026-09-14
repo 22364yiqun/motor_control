@@ -74,7 +74,7 @@ The instructions below follow SEGGER's current [J-Link Device Support Kit](https
 
 Install the current [SEGGER J-Link Software and Documentation Pack](https://www.segger.com/downloads/jlink/) and the HDSC HC32F448 CMSIS Pack/IDE support. The official HDSC Pack repository contains [`HDSC.HC32F448.1.0.1.pack`](https://github.com/hdscmcu/pack) and the device-specific `.FLM` files.
 
-A CMSIS `.pack` file is a ZIP archive. Open or extract it and locate:
+A ready-to-copy set of these files is included in [`tools/programming/jlink/hc32f448/`](../tools/programming/jlink/hc32f448/). It was extracted without modification from HDSC's official Pack and includes the upstream BSD-3-Clause notice. A CMSIS `.pack` file is a ZIP archive; the original files are located at:
 
 ```text
 FlashARM/HC32F448_128K.FLM

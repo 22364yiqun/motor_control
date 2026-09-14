@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Database>
+  <!-- 256 KiB HC32F448 variants -->
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448MCTI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K" Loader="HC32F448_256K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448KCTI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K" Loader="HC32F448_256K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448JCUI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K" Loader="HC32F448_256K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448JCTI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K" Loader="HC32F448_256K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448FCUI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 256K" Loader="HC32F448_256K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00040000" />
+    </FlashBankInfo>
+  </Device>
+
+  <!-- 128 KiB HC32F448 variants -->
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448MATI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 128K" Loader="HC32F448_128K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00020000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448KATI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 128K" Loader="HC32F448_128K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00020000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448JAUI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 128K" Loader="HC32F448_128K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00020000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448JATI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 128K" Loader="HC32F448_128K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00020000" />
+    </FlashBankInfo>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="XHSC" Name="HC32F448FAUI" Core="JLINK_CORE_CORTEX_M4" WorkRAMAddr="0x1FFF8000" WorkRAMSize="0x00004000" />
+    <FlashBankInfo Name="Internal Code Flash" BaseAddr="0x00000000" AlwaysPresent="1">
+      <LoaderInfo Name="HC32F448 128K" Loader="HC32F448_128K.FLM" LoaderType="FLASH_ALGO_TYPE_OPEN" MaxSize="0x00020000" />
+    </FlashBankInfo>
+  </Device>
+</Database>
