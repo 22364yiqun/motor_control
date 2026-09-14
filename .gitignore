@@ -1,7 +1,17 @@
-# Track only source code under source/.
+# Ignore generated/vendor files by default and explicitly keep project sources
+# and public documentation. Add future release directories here deliberately.
 *
 
 !.gitignore
+!README.md
+!CONTRIBUTING.md
+!requirements.txt
 !source/
 !source/**
 !*.py
+!docs/
+!docs/**
+!hardware/
+!hardware/**
+!tools/
+!tools/**
