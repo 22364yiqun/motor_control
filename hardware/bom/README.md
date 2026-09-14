@@ -1,3 +1,5 @@
-# BOM（待公开）
+# Bill of Materials (To Be Released)
 
-建议分别提供 `electronics-bom.csv`、`mechanical-bom.csv` 和总表。字段建议包括类别、位号/零件号、名称、规格、数量、制造商、制造商料号、替代料、供应商链接、参考单价、适用版本和备注；替代料请注明“已验证”或“仅理论兼容”。
+Provide separate `electronics-bom.csv` and `mechanical-bom.csv` files as well as an optional consolidated list. Recommended fields are category, reference/part number, description, specification, quantity, manufacturer, manufacturer part number, alternative part, supplier link, reference price, applicable revision, and notes.
+
+Mark every substitute as either tested or theoretically compatible.

@@ -1,19 +1,19 @@
-# 标定与调参
+# Calibration and Tuning
 
-## 推荐顺序
+## Recommended Sequence
 
-1. 断电检查相线、电源与传感器供电。
-2. 限流上电，先不使能功率输出。
-3. 标定三相电流零点与采样方向。
-4. 验证互补 PWM、死区和无直通。
-5. 验证编码器连续性、旋向、气隙和零点。
-6. 低电压/低电流确认极对数、相序与电角度对齐。
-7. 从低限幅开始调整电流环 PI。
-8. 从低 `Kp`、低 `Kd`、零前馈开始调整 MIT 外环。
-9. 接入第二编码器后校验减速比、回差与输出端零位。
-10. 逐级带载，记录温升、电流、噪声和跟踪误差。
+1. With power removed, check phase wiring, supply rails, and sensor power.
+2. Apply power through a current-limited supply without enabling the power stage.
+3. Calibrate the three phase-current offsets and confirm sensor polarity.
+4. Verify complementary PWM, dead time, and the absence of shoot-through.
+5. Verify encoder continuity, direction, air gap, and zero position.
+6. At low voltage/current, confirm pole pairs, phase order, and electrical-angle alignment.
+7. Tune the current-loop PI controller from conservative limits.
+8. Tune the MIT outer loop from low `Kp`, low `Kd`, and zero feed-forward torque.
+9. After adding the second encoder, verify the reduction ratio, backlash, and output zero.
+10. Increase load gradually while recording temperature, current, noise, and tracking error.
 
-首次运行应使用限流电源和急停，确认 `APP_ALLOW_OPEN_LOOP_RUN`、极对数、相序、编码器方向、电流采样正负号、减速比、`Kt` 及全部限幅，并确认 Flash 第 31 扇区没有与程序重叠。
+Before the first run, provide a current-limited supply and emergency stop; verify `APP_ALLOW_OPEN_LOOP_RUN`, pole pairs, phase order, encoder direction, current-sense polarity, reduction ratio, `Kt`, and every safety limit. Also confirm that internal-flash sector 31 does not overlap the program image.
 
 > [!CAUTION]
-> 多圈位置由单圈电机端编码器累计并写入 Flash。断电期间若转轴移动，恢复值可能不可靠；第二输出端编码器接入后应设计独立的一致性检查与回零策略。
+> Multi-turn position is currently accumulated from the motor-side single-turn encoder and stored in flash. Movement while power is off can make the restored position unreliable. When the second output encoder is integrated, add an independent consistency check and homing/recovery strategy.

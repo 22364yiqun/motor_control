@@ -1,3 +1,5 @@
-# 机械硬件（待公开）
+# Mechanical Design (To Be Released)
 
-本目录用于发布可编辑 CAD、中性格式、二维工程图、加工要求和版本记录。建议设置 `cad/`、`step/`、`drawings/`、`printable/` 和 `assets/` 子目录，并注明材料、表面处理、关键公差、配合、磁铁方向和适配的电控版本。
+This directory will contain editable CAD, neutral exchange formats, 2D drawings, manufacturing requirements, and revision history. Suggested subdirectories are `cad/`, `step/`, `drawings/`, `printable/`, and `assets/`.
+
+Each release should specify materials, finishes, critical tolerances and fits, magnet orientation, and compatible electronics revisions.

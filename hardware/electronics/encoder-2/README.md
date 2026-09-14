@@ -1,3 +1,5 @@
-# 第二编码器（待公开）
+# Second Encoder (To Be Released)
 
-本目录用于发布输出端第二编码器的电路、PCB、磁路/安装要求和固件接口。请说明型号、分辨率、通信接口、供电/电平、引脚、磁铁极化、允许气隙/偏心、零位标定、双编码器一致性检查，以及断电移动后的绝对位置恢复策略。
+This directory will contain the electronics, PCB, magnetic/mechanical requirements, and firmware interface for the output-side second encoder.
+
+The release should document the sensor model and resolution, interface, supply and logic levels, pinout, magnet type and polarization, permitted air gap and eccentricity, zero calibration, dual-encoder consistency checks, and recovery of absolute position after unpowered movement.

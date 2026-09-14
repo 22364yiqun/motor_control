@@ -1,3 +1,5 @@
-# 电路设计（待公开）
+# Electronics (To Be Released)
 
-本目录预留原理图源文件/PDF、PCB 源文件、层叠与设计规则、Gerber/钻孔/贴片坐标、关键布局说明、硬件变更记录与勘误。发布生产文件时请按 `rev-a/` 等版本建立独立目录，不要无版本覆盖历史资料。
+This directory is reserved for editable schematics and PDF exports, PCB source files, stack-up and design rules, Gerber/drill/placement files, critical-layout notes, revision history, and errata.
+
+Place every production release in a versioned directory such as `rev-a/`; do not overwrite historical manufacturing files with unversioned replacements.

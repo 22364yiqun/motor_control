@@ -1,110 +1,117 @@
 # motor_control
 
-面向一体化关节/伺服执行器的开源电机控制项目。项目以 HC32F4 系列 MCU 为控制核心，当前固件实现三相无刷电机 FOC、MA732 磁编码器采样、MIT 风格的位置/速度/前馈力矩控制、CAN 与串口命令，以及减速器输出端的多圈位置记忆。
+An open-source motor-control platform for integrated joints and servo actuators. Built around an HC32F4-series MCU, the current firmware implements three-phase BLDC/PMSM field-oriented control (FOC), MA732 magnetic-encoder sampling, MIT-style position/velocity/feed-forward torque control, CAN and UART command interfaces, and persistent multi-turn position tracking at the reducer output.
 
 > [!WARNING]
-> 电机驱动涉及高速旋转、大电流和功率器件。首次运行前请断开负载、使用限流电源并准备急停。默认参数仅对应作者当前样机，不可直接视为其他电机或功率板的安全参数。
+> Motor drives involve high currents, power electronics, and rapidly moving mechanisms. Disconnect the load, use a current-limited supply, and keep an emergency stop available during initial testing. The default parameters only describe the author's current prototype and must not be treated as safe values for another motor or power stage.
 
-## 项目状态
+## Project Status
 
-本仓库正在整理为包含电控、机械和调试资料的完整开源项目。
+This repository is being organized into a complete open-source release covering electronics, mechanics, assembly, and commissioning.
 
-| 模块 | 当前状态 | 位置 |
+| Module | Status | Location |
 | --- | --- | --- |
-| 电机控制固件 | 已公开，持续整理 | [`source/`](source/) |
-| Python CAN 测试工具 | 已公开 | [`can_trans.py`](can_trans.py) |
-| 控制原理与参数说明 | 已公开 | [`docs/control/`](docs/control/) |
-| CAN/串口协议 | 已整理 | [`docs/protocol/`](docs/protocol/) |
-| 电路原理图与 PCB | 待公开 | [`hardware/electronics/`](hardware/electronics/) |
-| 第二编码器设计 | 待公开 | [`hardware/electronics/encoder-2/`](hardware/electronics/encoder-2/) |
-| 机械结构与工程图 | 待公开 | [`hardware/mechanical/`](hardware/mechanical/) |
-| BOM | 待公开 | [`hardware/bom/`](hardware/bom/) |
-| 装配与调试 | 框架已建立，内容待补充 | [`docs/assembly/`](docs/assembly/)、[`docs/tuning/`](docs/tuning/) |
+| Motor-control firmware | Published; being refined | [`source/`](source/) |
+| Python CAN tools | Published | [`can_trans.py`](can_trans.py) |
+| Control theory and parameters | Published | [`docs/control/`](docs/control/) |
+| CAN and UART protocols | Documented | [`docs/protocol/`](docs/protocol/) |
+| Schematics and PCB | To be released | [`hardware/electronics/`](hardware/electronics/) |
+| Second-encoder design | To be released | [`hardware/electronics/encoder-2/`](hardware/electronics/encoder-2/) |
+| Mechanical design | To be released | [`hardware/mechanical/`](hardware/mechanical/) |
+| Bill of materials | To be released | [`hardware/bom/`](hardware/bom/) |
+| Assembly and tuning | Structure available; content in progress | [`docs/assembly/`](docs/assembly/), [`docs/tuning/`](docs/tuning/) |
 
-当前版本是源码快照，尚未包含完整 IDE 工程、芯片启动文件、链接脚本和 HC32 DDL。补齐这些依赖前，仓库不能作为独立工程直接编译。
+The current repository is a source snapshot. It does not yet include a complete IDE project, device startup code, linker script, or the HC32 Device Driver Library (DDL), so it cannot be built as a standalone project until those dependencies are added.
 
-## 功能概览
+## Features
 
-- 三相电流采样、Clarke/Park 变换、dq 电流 PI 和 SVPWM
-- 20 kHz 中心对齐 PWM；电流环按 4 分频运行
-- MA732 14 位磁编码器，SPI3 + DMA 读取
-- MIT 风格控制：位置误差、速度误差和前馈力矩共同生成目标转矩
-- 57:7 减速比下的输出轴角度换算与掉电多圈位置记忆
-- 经典 CAN 2.0 命令、ACK/心跳与总线诊断
-- UART 命令和运行状态输出
-- ADC 零点校准、相电流/三相和校验、编码器超时等保护
+- Three-phase current sensing, Clarke/Park transforms, dq current PI control, and SVPWM
+- 20 kHz center-aligned PWM; current loop executed at one-quarter of the fast-loop rate
+- MA732 14-bit magnetic encoder over SPI3 with DMA-assisted acquisition
+- MIT-style control combining position error, velocity error, and feed-forward torque
+- Output-angle conversion for a 57:7 reduction ratio and flash-backed multi-turn position tracking
+- Classic CAN 2.0 commands, acknowledgements, heartbeat messages, and bus diagnostics
+- UART command input and runtime telemetry
+- ADC-offset calibration, phase-current protection, three-phase sum checks, and encoder-stale protection
 
-## 控制结构
+## Control Architecture
 
 ```text
-目标位置/速度/前馈力矩
-          │
-          ▼
-τout = Kp·位置误差 + Kd·速度误差 + τff
-          │  限幅、静摩擦补偿
-          ▼
-τmotor = τout / (减速比 × 传动效率)
-          │
-          ▼
-Iq_ref = τmotor / Kt，Id_ref = 0
-          │
-          ▼
-dq 电流 PI → 反 Park → SVPWM → 三相逆变器 → 电机
-          ▲
-          └──── 三相电流 + MA732 转子角度
+Position / velocity / feed-forward torque target
+                         │
+                         ▼
+τout = Kp·position_error + Kd·velocity_error + τff
+                         │  limits and static-friction compensation
+                         ▼
+τmotor = τout / (gear ratio × transmission efficiency)
+                         │
+                         ▼
+Iq_ref = τmotor / Kt, Id_ref = 0
+                         │
+                         ▼
+dq current PI → inverse Park → SVPWM → inverter → motor
+                         ▲
+                         └──── phase currents + MA732 rotor angle
 ```
 
-主要参数集中在 [`source/motor/config.h`](source/motor/config.h)。控制原理和已有测试流程见 [`docs/control/mit-control.md`](docs/control/mit-control.md)。
+The main configuration parameters are in [`source/motor/config.h`](source/motor/config.h). See [`docs/control/mit-control.md`](docs/control/mit-control.md) for the current control notes and test procedure.
 
-## 仓库结构
+## Repository Layout
 
 ```text
 motor_control/
-├─ source/                     # MCU 固件源码
-│  ├─ inc/                    # 外设接口头文件
-│  ├─ src/                    # ADC/CAN/DMA/GPIO/SPI/TIM/UART 等
-│  └─ motor/                  # FOC、控制器、编码器、位置记忆
-├─ tools/                      # 上位机工具说明及后续工具
-├─ docs/                       # 控制、协议、装配、调参文档
-├─ hardware/                   # 电路、第二编码器、机械与 BOM
-├─ can_trans.py               # 达妙 USB-CAN 适配器命令行工具
-├─ can_code_control_test.py   # 角度序列测试
-└─ vla_can_control_example.py # VLA 输出接入示例
+├─ source/                     # MCU firmware source
+│  ├─ inc/                    # Peripheral interface headers
+│  ├─ src/                    # ADC/CAN/DMA/GPIO/SPI/TIM/UART drivers
+│  └─ motor/                  # FOC, controller, encoder, position memory
+├─ tools/                      # Host-tool documentation and future tools
+├─ docs/                       # Control, protocol, assembly, and tuning docs
+├─ hardware/                   # Electronics, second encoder, mechanics, and BOM
+├─ can_trans.py               # Damiao USB-CAN command-line utility
+├─ can_code_control_test.py   # Position-sequence test
+└─ vla_can_control_example.py # Example VLA-to-CAN integration
 ```
 
-详细导航见 [`docs/README.md`](docs/README.md)。
+See [`docs/README.md`](docs/README.md) for the documentation index.
 
-## 快速开始
+## Quick Start
 
-### 1. 准备固件工程
+### 1. Prepare the Firmware Project
 
-当前仓库只包含应用源码。请先在 HC32F4 工程中加入 `source/inc/`、`source/src/*.c`、`source/motor/*.c`，以及对应芯片的启动文件、链接脚本、CMSIS、HC32 DDL 和数学库。当前配置中的 BSP 宏为 `BSP_EV_HC32F448_LQFP80`。正式接线表、工程文件与下载步骤将在硬件资料发布后补充。
+The repository currently contains application source only. Add `source/inc/`, `source/src/*.c`, and `source/motor/*.c` to an HC32F4 project together with the correct startup code, linker script, CMSIS files, HC32 DDL, and math-library support. The current BSP macro is `BSP_EV_HC32F448_LQFP80`. A complete project, pinout, and flashing procedure will be added with the hardware release.
 
-### 2. 核对参数
+### 2. Review the Configuration
 
-通电前至少确认 [`source/motor/config.h`](source/motor/config.h) 中的电机极对数、编码器方向/零点、减速比、传动效率、`Kt`、电流采样比例/方向、过流阈值、PWM/死区、CAN 配置及 Flash 第 31 扇区占用情况。
+Before applying power, check at least the following settings in [`source/motor/config.h`](source/motor/config.h):
 
-默认 `APP_ALLOW_OPEN_LOOP_RUN = 1`，ADC 零点校准完成后会自动进入电机启动流程。初次移植建议先改为 `0` 并完成静态检查。
+- Motor pole pairs, encoder direction, and electrical zero offset
+- Reduction ratio, transmission efficiency, and torque constant `Kt`
+- Current-sense scaling, polarity, and overcurrent thresholds
+- PWM frequency, dead time, voltage limits, and current limits
+- CAN bit timing and transceiver standby/enable configuration
+- Whether internal-flash sector 31 overlaps the application or other stored data
 
-### 3. Python CAN 工具
+`APP_ALLOW_OPEN_LOOP_RUN` is `1` by default, which allows the startup sequence to proceed automatically after ADC-offset calibration. Set it to `0` during a new hardware port until all static checks have passed.
+
+### 3. Use the Python CAN Tool
 
 ```bash
 python -m pip install -r requirements.txt
 python can_trans.py --port COM5 --serial-baud 921600 --pos 10 --vel 0 --tau 0
 ```
 
-交互或持续发送：
+Interactive or repeated transmission:
 
 ```bash
 python can_trans.py --port COM5 --interactive
 python can_trans.py --port COM5 --pos 10 --repeat --hz 20
 ```
 
-默认示例面向达妙 USB-CAN 串口协议，不是通用 `python-can` 驱动。参数单位和帧格式见 [`docs/protocol/can.md`](docs/protocol/can.md)。
+The current host utility targets the serial protocol used by a Damiao USB-CAN adapter; it is not a generic `python-can` driver. See [`docs/protocol/can.md`](docs/protocol/can.md) for payload units and frame layout.
 
-### 4. 小角度空载验证
+### 4. Perform a Small-Angle No-Load Test
 
-完成接线、限流和方向检查后，等待状态进入 `st=2`，再通过 UART 依次发送：
+After checking wiring, current limiting, phase order, and encoder direction, wait until the state reaches `st=2`, then send these UART commands:
 
 ```text
 m0
@@ -113,35 +120,35 @@ m30
 m0
 ```
 
-若出现冲击、反向、啸叫、持续大电流或位置跳变，应立即断电并按 [`docs/tuning/README.md`](docs/tuning/README.md) 排查。
+Immediately remove power if the motor kicks, runs in the wrong direction, oscillates, draws sustained high current, or reports discontinuous position. Continue troubleshooting with [`docs/tuning/README.md`](docs/tuning/README.md).
 
-## 默认关键参数
+## Default Parameters
 
-以下值来自当前代码，只用于帮助阅读；实际使用以 `config.h` 为准。
+These values are a reading aid only. [`source/motor/config.h`](source/motor/config.h) is authoritative.
 
-| 参数 | 默认值 |
+| Parameter | Current default |
 | --- | --- |
-| PWM / 快速控制频率 | 20 kHz |
-| dq 电流环频率 | 5 kHz |
-| MIT 外环频率 | 1 kHz |
-| 电机极对数 | 14 |
-| 减速比（电机:输出） | 57:7 |
-| 编码器 | MA732，14 bit，SPI mode 3 |
-| 输出力矩 / `Iq` 限幅 | 0.020 N·m / 0.120 A |
-| CAN 命令/应答 ID | `0x201` / `0x202` |
-| CAN 标称速率 | 代码注释对应 1 Mbit/s 配置 |
+| PWM / fast-control frequency | 20 kHz |
+| dq current-loop frequency | 5 kHz |
+| MIT outer-loop frequency | 1 kHz |
+| Motor pole pairs | 14 |
+| Reduction ratio (motor:output) | 57:7 |
+| Encoder | MA732, 14 bit, SPI mode 3 |
+| Output-torque / `Iq` limit | 0.020 N·m / 0.120 A |
+| CAN command / response ID | `0x201` / `0x202` |
+| Nominal CAN rate | Timing comments correspond to 1 Mbit/s |
 
-## 参与贡献
+## Contributing
 
-欢迎提交 Issue 和 Pull Request。请先阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)，并说明所用硬件版本、电机/编码器、供电与可复现步骤。涉及功率级或控制参数的修改，请同时说明安全边界和实测条件。
+Issues and pull requests are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first and include the hardware revision, motor and encoder, supply conditions, and reproducible steps. Changes to the power stage or control parameters should also state the tested operating envelope and relevant safety limits.
 
-## 开源许可
+## License
 
-本项目的开源许可证尚未确定。在正式加入 `LICENSE` 前，仓库内容默认受版权保护；“公开可见”不等于已经授予复制、修改或再分发许可。电路、机械和第三方库可能需要分别标注许可。
+An open-source license has not yet been selected. Until a `LICENSE` file is added, the repository contents remain copyright-protected; public visibility alone does not grant permission to copy, modify, or redistribute them. Electronics, mechanical designs, and third-party libraries may ultimately require separate license notices.
 
-## 联系与引用
+## Contact and Citation
 
-- 项目主页：<https://github.com/ZJYSII/motor_control>
-- 问题与建议：请使用 GitHub Issues
+- Project: <https://github.com/ZJYSII/motor_control>
+- Questions and suggestions: please use GitHub Issues
 
-如果本项目对你的研究或开发有帮助，欢迎 Star；引用格式将在首个稳定版本发布时补充。
+If this project helps your research or development, consider starring it. Citation metadata will be added with the first stable release.
